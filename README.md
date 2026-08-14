@@ -20,7 +20,7 @@ Four layers, cheapest first:
 | Layer | Event | What it does | Cost |
 | :---- | :---- | :----------- | :--- |
 | 1. Re-injection | `SessionStart` | Puts the full text of the CLAUDE.md files in force into context — on startup, on `--resume`, after `/clear`, after a compaction, and in a fork | size of the rules, once per session |
-| 2. Reminder | `UserPromptSubmit` | Asks the model to check itself against the rules before acting, and to show the verdict rule by rule in whatever output or analysis it produces | ~70 tokens per prompt |
+| 2. Reminder | `UserPromptSubmit` | Asks the model to check itself against the rules before acting, and to show the verdict rule by rule whenever it concludes, analyses or recommends | ~90 tokens per prompt |
 | 3. Nudge | `PostToolUse` | After `Edit`/`Write`/`MultiEdit`/`NotebookEdit`/`Bash` — "you just changed `<file>`, check it against CLAUDE.md". The wording rotates so the model does not tune it out | ~35 tokens, at most once per 45 s |
 | 4. Self-check | `Stop` | If the turn changed anything, lists what changed and asks for a rule-by-rule compliance list before finishing | ~80 tokens plus one extra model round |
 
@@ -33,9 +33,15 @@ verdict to appear in the answer, one line per applicable rule:
 - Use markdown links for file references — violated: plain backticks in the summary above
 ```
 
-Naming each rule and its verdict is what makes a skipped rule visible. Set
-`complianceReport` to `changes` to ask for the list only when a turn changed
-something, or to `off` for the plain "check yourself" wording.
+Naming each rule and its verdict is what makes a skipped rule visible.
+
+The list is asked for where there is something to judge — a conclusion, an
+analysis, a recommendation. Status updates, acknowledgements and one-line
+factual replies are exempt on purpose: a compliance list under "the old monitor
+expired, no action needed" is noise, and noise is what teaches the model to
+skip the list where it matters. Set `complianceReport` to `changes` to narrow
+it further, to turns that actually changed something, or to `off` for the plain
+"check yourself" wording.
 
 Layer 1 mirrors how Claude Code itself loads memory: it walks the tree from the
 root down to the working directory, collects `CLAUDE.md`, `CLAUDE.local.md`,
@@ -97,7 +103,7 @@ variables (the key in SCREAMING_SNAKE_CASE).
 | `nudgeCooldownSec` | `45` | Minimum interval between layer-3 nudges |
 | `nudgeOnNewFile` | `false` | Nudge on every new file regardless of the interval |
 | `stopMode` | `feedback` | `feedback` — soft form (`additionalContext`, shown as "Stop hook feedback"); `block` — hard form (`decision: block`, flagged as a hook error); `off` — disable layer 4 |
-| `complianceReport` | `always` | Where to demand an explicit rule-by-rule list: `always` — in every output or analysis and again before finishing; `changes` — only before finishing a turn that changed state; `off` — never |
+| `complianceReport` | `analysis` | Where to demand an explicit rule-by-rule list: `analysis` — whenever the answer concludes, analyses or recommends, and again before finishing a changing turn; `changes` — only before finishing a turn that changed state; `off` — never. `always` is accepted as an alias for `analysis` |
 | `promptReminder` | `true` | Layer 2 |
 | `skipReadOnlyBash` | `true` | Do not nudge after read-only commands |
 | `includeRules` | `true` | Include `.claude/rules/*.md` |

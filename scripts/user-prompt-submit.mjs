@@ -6,7 +6,9 @@
  * is in force" reads as background and produces nothing, while "check yourself
  * against CLAUDE.md" names an action. With complianceReport on, the request
  * goes further and asks for the verdict per rule — a demand that cannot be
- * satisfied by silently thinking about it.
+ * satisfied by silently thinking about it. The exemption for status updates
+ * matters as much as the demand: a compliance list under a one-line status
+ * reply is noise, and noise is what trains the model to skip the list.
  *
  * No files are read here — this hook blocks prompt submission, so it has to be
  * instant.
@@ -19,13 +21,13 @@ const BASE =
   'Check your plan and your actions for this turn against CLAUDE.md before acting; where they differ, CLAUDE.md wins.';
 
 const REPORT =
-  ' When you present output or analysis, state how it lines up with CLAUDE.md rule by rule: one line per applicable rule, each marked followed or violated, and fix what is violated before presenting it.';
+  ' When your answer draws conclusions, analyses something, or recommends an action, close it with one line per applicable CLAUDE.md rule, each marked followed or violated, and fix what is violated first. Status updates, acknowledgements and short factual replies carry no such list.';
 
 run(async () => {
   const input = await readInput();
   const config = loadConfig(input.cwd);
   if (!config.promptReminder) return null;
 
-  const text = config.complianceReport === 'always' ? BASE + REPORT : BASE;
+  const text = config.complianceReport === 'analysis' ? BASE + REPORT : BASE;
   return additionalContext('UserPromptSubmit', message(config, 'promptReminder', text));
 });

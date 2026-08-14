@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-08-15
+
+### Changed
+
+- The compliance list is now asked for only where there is something to judge:
+  a conclusion, an analysis, a recommendation. Status updates,
+  acknowledgements and one-line factual replies are exempt. A compliance list
+  under "the old monitor expired, no action needed" is noise, and noise is
+  what teaches the model to skip the list where it matters.
+- The `complianceReport` level formerly called `always` is now `analysis`.
+  `always` still works as an alias.
+
 ## [0.2.0] — 2026-08-15
 
 ### Added
@@ -36,5 +48,6 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.3.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.3.0
 [0.2.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.2.0
 [0.1.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.1.0

@@ -91,10 +91,21 @@ test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {
   const context = out.hookSpecificOutput.additionalContext;
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(context, /CLAUDE\.md/);
-  assert.match(context, /rule by rule/);
+  assert.match(context, /draws conclusions/);
   assert.match(context, /followed or violated/);
+  assert.match(context, /Status updates.*no such list/, 'status replies must be exempt');
   assert.ok(context.split('\n').length === 1, 'the reminder must be a single line');
   assert.ok(context.length < 500, `too long: ${context.length}`);
+});
+
+test('the 0.2.0 name "always" still selects the analysis level', () => {
+  const env = { ...isolated(), CLAUDE_MD_GUARD_COMPLIANCE_REPORT: 'always' };
+  const out = runHook('user-prompt-submit.mjs', {
+    session_id: 'sess-4d',
+    cwd: projectWithRules(),
+    prompt: 'refactor this',
+  }, env);
+  assert.match(out.hookSpecificOutput.additionalContext, /draws conclusions/);
 });
 
 test('UserPromptSubmit drops the report demand when complianceReport is off', () => {
@@ -107,7 +118,7 @@ test('UserPromptSubmit drops the report demand when complianceReport is off', ()
 
   const context = out.hookSpecificOutput.additionalContext;
   assert.match(context, /CLAUDE\.md/);
-  assert.ok(!/rule by rule/.test(context), 'the report demand must be gone');
+  assert.ok(!/draws conclusions/.test(context), 'the report demand must be gone');
   assert.ok(context.length < 200, `too long: ${context.length}`);
 });
 
@@ -119,7 +130,7 @@ test('UserPromptSubmit stays short when complianceReport is limited to changes',
     prompt: 'refactor this',
   }, env);
 
-  assert.ok(!/rule by rule/.test(out.hookSpecificOutput.additionalContext));
+  assert.ok(!/draws conclusions/.test(out.hookSpecificOutput.additionalContext));
 });
 
 test('PostToolUse nudges after Edit and stays quiet after a read', () => {

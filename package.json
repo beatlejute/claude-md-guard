@@ -1,6 +1,6 @@
 {
   "name": "claude-md-guard",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Claude Code plugin: re-injects CLAUDE.md after compaction and makes turns that changed files verify themselves against the rules before finishing.",
   "type": "module",
   "private": true,

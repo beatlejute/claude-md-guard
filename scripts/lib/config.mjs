@@ -27,13 +27,17 @@ export const DEFAULTS = {
   stopMode: 'feedback',
   /**
    * Demand an explicit rule-by-rule compliance list in the visible answer:
-   *   always  — on every output or analysis, and again before finishing
-   *   changes — only before finishing a turn that changed state
-   *   off     — never asked for
+   *   analysis — whenever the answer concludes, analyses or recommends, and
+   *              again before finishing a turn that changed state
+   *   changes  — only before finishing a turn that changed state
+   *   off      — never asked for
    * "Verify against the rules" alone is easy to answer with silence; naming
-   * each rule and its verdict is not.
+   * each rule and its verdict is not. Status updates and one-line factual
+   * replies are exempt — a compliance list under "the monitor expired" is
+   * noise, and noise is what teaches the model to skip the list entirely.
+   * `always` is accepted as an alias for `analysis`.
    */
-  complianceReport: 'always',
+  complianceReport: 'analysis',
   /** One-line reminder on every user prompt. */
   promptReminder: true,
   /** Skip the nudge after clearly read-only Bash commands (ls, git status, …). */
@@ -66,7 +70,13 @@ export function loadConfig(cwd) {
   for (const file of configFiles(cwd)) {
     config = merge(config, readJson(file));
   }
-  return merge(config, fromEnv());
+  return normalize(merge(config, fromEnv()));
+}
+
+function normalize(config) {
+  // `always` was the 0.2.0 name for this level.
+  if (config.complianceReport === 'always') config.complianceReport = 'analysis';
+  return config;
 }
 
 function configFiles(cwd) {
