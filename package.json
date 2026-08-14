@@ -1,0 +1,24 @@
+{
+  "name": "claude-md-guard",
+  "version": "0.1.0",
+  "description": "Claude Code plugin: re-injects CLAUDE.md after compaction and makes turns that changed files verify themselves against the rules before finishing.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "author": "beatlejute (https://github.com/beatlejute)",
+  "homepage": "https://github.com/beatlejute/claude-md-guard#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beatlejute/claude-md-guard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/beatlejute/claude-md-guard/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": ["claude-code", "plugin", "hooks", "claude-md", "compaction"]
+}

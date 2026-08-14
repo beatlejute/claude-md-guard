@@ -1,0 +1,15 @@
+{
+  "name": "claude-md-guard",
+  "displayName": "CLAUDE.md Guard",
+  "version": "0.1.0",
+  "description": "Re-injects CLAUDE.md through hooks and makes a turn that changed files check itself against the rules before finishing.",
+  "author": {
+    "name": "beatlejute",
+    "url": "https://github.com/beatlejute"
+  },
+  "homepage": "https://github.com/beatlejute/claude-md-guard#readme",
+  "repository": "https://github.com/beatlejute/claude-md-guard",
+  "license": "MIT",
+  "keywords": ["claude-md", "hooks", "rules", "compliance", "context", "compaction"],
+  "hooks": "./hooks/hooks.json"
+}

@@ -1,0 +1,20 @@
+{
+  "name": "claude-md-guard",
+  "description": "The claude-md-guard plugin: CLAUDE.md re-injection and enforced self-checking through hooks.",
+  "owner": {
+    "name": "beatlejute",
+    "url": "https://github.com/beatlejute"
+  },
+  "plugins": [
+    {
+      "name": "claude-md-guard",
+      "displayName": "CLAUDE.md Guard",
+      "source": "./",
+      "description": "Re-injects CLAUDE.md through hooks and makes a turn that changed files check itself against the rules before finishing.",
+      "homepage": "https://github.com/beatlejute/claude-md-guard#readme",
+      "repository": "https://github.com/beatlejute/claude-md-guard",
+      "license": "MIT",
+      "keywords": ["claude-md", "hooks", "rules", "compliance", "context", "compaction"]
+    }
+  ]
+}
