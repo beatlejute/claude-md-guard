@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-08-15
+
+### Fixed
+
+- The compliance list was printed twice on turns that changed state: layer 2
+  asked for it in the answer, then layer 4 asked again and the model produced
+  a second copy. Layer 4 now reads `last_assistant_message` and stays silent
+  when a list is already there, which also drops the pointless extra model
+  round. Two or more lines ending in a verdict word count as a list; a single
+  "followed" in running prose does not.
+
+### Changed
+
+- Both layers now say to leave inapplicable rules out of the list entirely
+  rather than listing them as "not applicable" — that was padding the list to
+  a dozen lines of noise.
+
 ## [0.3.0] — 2026-08-15
 
 ### Changed
@@ -48,6 +65,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.4.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.4.0
 [0.3.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.3.0
 [0.2.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.2.0
 [0.1.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.1.0

@@ -197,6 +197,69 @@ test('Stop asks for a check after a changing turn and clears the record', () => 
   assert.equal(again, null, 'the record must be cleared after the first firing');
 });
 
+test('Stop does not ask again when the answer already carries the list', () => {
+  const env = isolated();
+  const cwd = projectWithRules();
+  runHook('post-tool-use.mjs', {
+    session_id: 'sess-11',
+    cwd,
+    tool_name: 'Edit',
+    tool_input: { file_path: join(cwd, 'api.ts') },
+  }, env);
+
+  const out = runHook('stop.mjs', {
+    session_id: 'sess-11',
+    cwd,
+    stop_hook_active: false,
+    last_assistant_message: [
+      'Done, the client now retries once.',
+      '',
+      '- Answer in Russian — followed',
+      '- Worktree first for client code — violated: edited on main',
+    ].join('\n'),
+  }, env);
+  assert.equal(out, null, 'the list is already there; asking again would print it twice');
+});
+
+test('Stop still asks when the answer only mentions a verdict word in prose', () => {
+  const env = isolated();
+  const cwd = projectWithRules();
+  runHook('post-tool-use.mjs', {
+    session_id: 'sess-12',
+    cwd,
+    tool_name: 'Edit',
+    tool_input: { file_path: join(cwd, 'api.ts') },
+  }, env);
+
+  const out = runHook('stop.mjs', {
+    session_id: 'sess-12',
+    cwd,
+    stop_hook_active: false,
+    last_assistant_message: 'I followed the plan and rewrote the retry logic.',
+  }, env);
+  assert.ok(out, 'one stray "followed" in prose is not a compliance list');
+  assert.match(out.hookSpecificOutput.additionalContext, /rule by rule/);
+});
+
+test('Stop asks again when complianceReport is off, list or not', () => {
+  const env = { ...isolated(), CLAUDE_MD_GUARD_COMPLIANCE_REPORT: 'off' };
+  const cwd = projectWithRules();
+  runHook('post-tool-use.mjs', {
+    session_id: 'sess-13',
+    cwd,
+    tool_name: 'Edit',
+    tool_input: { file_path: join(cwd, 'api.ts') },
+  }, env);
+
+  const out = runHook('stop.mjs', {
+    session_id: 'sess-13',
+    cwd,
+    stop_hook_active: false,
+    last_assistant_message: '- Rule A — followed\n- Rule B — followed',
+  }, env);
+  assert.ok(out, 'with the report off the plain check is still due');
+});
+
 test('Stop falls back to the plain wording when complianceReport is off', () => {
   const env = { ...isolated(), CLAUDE_MD_GUARD_COMPLIANCE_REPORT: 'off' };
   const cwd = projectWithRules();

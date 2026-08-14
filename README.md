@@ -33,7 +33,13 @@ verdict to appear in the answer, one line per applicable rule:
 - Use markdown links for file references — violated: plain backticks in the summary above
 ```
 
-Naming each rule and its verdict is what makes a skipped rule visible.
+Naming each rule and its verdict is what makes a skipped rule visible. Only
+rules that actually bear on the turn belong in the list — a rule that does not
+apply is left out, not listed as "not applicable".
+
+The list is printed once. Layer 4 reads `last_assistant_message`, and if the
+answer already carries a list it stays silent instead of asking for a second
+one, which also saves the extra model round.
 
 The list is asked for where there is something to judge — a conclusion, an
 analysis, a recommendation. Status updates, acknowledgements and one-line

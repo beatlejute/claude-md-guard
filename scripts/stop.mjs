@@ -28,6 +28,12 @@ run(async () => {
   clearTurn(input.session_id);
   if (config.stopMode === 'off') return null;
 
+  // Layer 2 already asked for the list, and the answer carries one. Asking
+  // again would print it twice and cost an extra model round for nothing.
+  if (config.complianceReport !== 'off' && hasComplianceList(input.last_assistant_message)) {
+    return null;
+  }
+
   const text = message(config, 'stop', render(events, config));
   if (config.stopMode === 'block') return { decision: 'block', reason: text };
   return additionalContext('Stop', text);
@@ -47,9 +53,9 @@ function render(events, config) {
   } else {
     parts.push(
       'Re-read CLAUDE.md and go through it rule by rule against this turn.',
-      'Show the result in your answer as one line per applicable rule, in the form',
+      'Show the result in your answer as one line per rule that actually bears on this turn, in the form',
       '"<rule> — followed" or "<rule> — violated: <what and where>".',
-      'Fix everything marked violated before finishing; rules that do not apply to this turn can be left out.',
+      'Leave every other rule out entirely rather than listing it as not applicable, and fix what is violated before finishing.',
     );
   }
   return parts.join(' ');
@@ -60,4 +66,19 @@ function describe(event) {
   if (!event.target) return action;
   if (action.startsWith('ran a shell')) return `${action}: \`${event.target}\``;
   return `${action} ${event.target}`;
+}
+
+/**
+ * Does the finished answer already carry a rule-by-rule list?
+ *
+ * Two or more lines ending in the verdict word is the signature; one stray
+ * mention of "followed" in prose is not. Matched case-insensitively and
+ * across the dash characters models actually produce.
+ */
+function hasComplianceList(lastAssistantMessage) {
+  if (typeof lastAssistantMessage !== 'string') return false;
+  const verdicts = lastAssistantMessage.match(
+    /^[^\S\n]*[-*•]?[^\n]*[—–:-][^\S\n]*(followed|violated|not applicable)\b/gim,
+  );
+  return Boolean(verdicts) && verdicts.length >= 2;
 }
