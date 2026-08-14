@@ -28,20 +28,31 @@ run(async () => {
   clearTurn(input.session_id);
   if (config.stopMode === 'off') return null;
 
-  const text = message(config, 'stop', render(events));
+  const text = message(config, 'stop', render(events, config));
   if (config.stopMode === 'block') return { decision: 'block', reason: text };
   return additionalContext('Stop', text);
 });
 
-function render(events) {
+function render(events, config) {
   const listed = events.slice(0, MAX_LISTED).map(describe);
   const rest = events.length - listed.length;
   const tail = rest > 0 ? `, and ${rest} more change${rest === 1 ? '' : 's'}` : '';
-  return [
-    `This turn changed: ${listed.join('; ')}${tail}.`,
-    'Re-read CLAUDE.md, check the whole turn against it, and fix anything that breaks a rule before finishing.',
-    'If the turn already follows the rules, say so in one line and finish.',
-  ].join(' ');
+  const parts = [`This turn changed: ${listed.join('; ')}${tail}.`];
+
+  if (config.complianceReport === 'off') {
+    parts.push(
+      'Re-read CLAUDE.md, check the whole turn against it, and fix anything that breaks a rule before finishing.',
+      'If the turn already follows the rules, say so in one line and finish.',
+    );
+  } else {
+    parts.push(
+      'Re-read CLAUDE.md and go through it rule by rule against this turn.',
+      'Show the result in your answer as one line per applicable rule, in the form',
+      '"<rule> — followed" or "<rule> — violated: <what and where>".',
+      'Fix everything marked violated before finishing; rules that do not apply to this turn can be left out.',
+    );
+  }
+  return parts.join(' ');
 }
 
 function describe(event) {

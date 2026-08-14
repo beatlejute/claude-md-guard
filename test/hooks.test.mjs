@@ -81,7 +81,7 @@ test('SessionStart stays quiet when there are no rules', () => {
   assert.equal(out, null);
 });
 
-test('UserPromptSubmit returns a one-line request to verify', () => {
+test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {
   const out = runHook('user-prompt-submit.mjs', {
     session_id: 'sess-4',
     cwd: projectWithRules(),
@@ -91,8 +91,35 @@ test('UserPromptSubmit returns a one-line request to verify', () => {
   const context = out.hookSpecificOutput.additionalContext;
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(context, /CLAUDE\.md/);
+  assert.match(context, /rule by rule/);
+  assert.match(context, /followed or violated/);
   assert.ok(context.split('\n').length === 1, 'the reminder must be a single line');
+  assert.ok(context.length < 500, `too long: ${context.length}`);
+});
+
+test('UserPromptSubmit drops the report demand when complianceReport is off', () => {
+  const env = { ...isolated(), CLAUDE_MD_GUARD_COMPLIANCE_REPORT: 'off' };
+  const out = runHook('user-prompt-submit.mjs', {
+    session_id: 'sess-4b',
+    cwd: projectWithRules(),
+    prompt: 'refactor this',
+  }, env);
+
+  const context = out.hookSpecificOutput.additionalContext;
+  assert.match(context, /CLAUDE\.md/);
+  assert.ok(!/rule by rule/.test(context), 'the report demand must be gone');
   assert.ok(context.length < 200, `too long: ${context.length}`);
+});
+
+test('UserPromptSubmit stays short when complianceReport is limited to changes', () => {
+  const env = { ...isolated(), CLAUDE_MD_GUARD_COMPLIANCE_REPORT: 'changes' };
+  const out = runHook('user-prompt-submit.mjs', {
+    session_id: 'sess-4c',
+    cwd: projectWithRules(),
+    prompt: 'refactor this',
+  }, env);
+
+  assert.ok(!/rule by rule/.test(out.hookSpecificOutput.additionalContext));
 });
 
 test('PostToolUse nudges after Edit and stays quiet after a read', () => {
@@ -148,6 +175,8 @@ test('Stop asks for a check after a changing turn and clears the record', () => 
   }, env);
   assert.match(stop.hookSpecificOutput.additionalContext, /README\.md/);
   assert.match(stop.hookSpecificOutput.additionalContext, /CLAUDE\.md/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /followed/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /violated/);
 
   const again = runHook('stop.mjs', {
     session_id: 'sess-7',
@@ -155,6 +184,36 @@ test('Stop asks for a check after a changing turn and clears the record', () => 
     stop_hook_active: false,
   }, env);
   assert.equal(again, null, 'the record must be cleared after the first firing');
+});
+
+test('Stop falls back to the plain wording when complianceReport is off', () => {
+  const env = { ...isolated(), CLAUDE_MD_GUARD_COMPLIANCE_REPORT: 'off' };
+  const cwd = projectWithRules();
+  runHook('post-tool-use.mjs', {
+    session_id: 'sess-7b',
+    cwd,
+    tool_name: 'Write',
+    tool_input: { file_path: join(cwd, 'notes.md') },
+  }, env);
+
+  const stop = runHook('stop.mjs', { session_id: 'sess-7b', cwd, stop_hook_active: false }, env);
+  const context = stop.hookSpecificOutput.additionalContext;
+  assert.match(context, /notes\.md/);
+  assert.ok(!/one line per applicable rule/.test(context));
+});
+
+test('Stop still asks for the report when it is limited to changes', () => {
+  const env = { ...isolated(), CLAUDE_MD_GUARD_COMPLIANCE_REPORT: 'changes' };
+  const cwd = projectWithRules();
+  runHook('post-tool-use.mjs', {
+    session_id: 'sess-7c',
+    cwd,
+    tool_name: 'Edit',
+    tool_input: { file_path: join(cwd, 'z.ts') },
+  }, env);
+
+  const stop = runHook('stop.mjs', { session_id: 'sess-7c', cwd, stop_hook_active: false }, env);
+  assert.match(stop.hookSpecificOutput.additionalContext, /rule by rule/);
 });
 
 test('Stop stays quiet on a conversational turn', () => {

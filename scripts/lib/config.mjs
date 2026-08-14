@@ -25,6 +25,15 @@ export const DEFAULTS = {
   nudgeOnNewFile: false,
   /** Stop behaviour: feedback | block | off. */
   stopMode: 'feedback',
+  /**
+   * Demand an explicit rule-by-rule compliance list in the visible answer:
+   *   always  — on every output or analysis, and again before finishing
+   *   changes — only before finishing a turn that changed state
+   *   off     — never asked for
+   * "Verify against the rules" alone is easy to answer with silence; naming
+   * each rule and its verdict is not.
+   */
+  complianceReport: 'always',
   /** One-line reminder on every user prompt. */
   promptReminder: true,
   /** Skip the nudge after clearly read-only Bash commands (ls, git status, …). */
