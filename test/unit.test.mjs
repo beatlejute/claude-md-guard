@@ -41,6 +41,37 @@ test('state-changing commands are recognized', () => {
   }
 });
 
+test('pipes inside quotes do not split the command', () => {
+  for (const command of [
+    'grep -nE "Error|Timeout|failed|passed" logs/run.log',
+    `grep -n "\\[32b\\]\\[CONN\\]\\|connection lost\\|connectionId" logs/run.log`,
+    'cd /c/Dev/app/.local && grep -E "passed|failed" logs/run.log | tail -2',
+    `grep -oE '"2026-08-15T[0-9:.]+Z"' logs/stat.txt | sort -u`,
+    'ls milestones/scenarios/ | grep -E "^(01|13|17)-"',
+  ]) {
+    assert.equal(isReadOnlyCommand(command), true, command);
+  }
+});
+
+test('discarded output is not a write, a real file is', () => {
+  assert.equal(isReadOnlyCommand('ls sessions/ 2>/dev/null | grep -i test'), true);
+  assert.equal(isReadOnlyCommand('tasklist //FI "IMAGENAME eq chrome.exe" 2>&1 | grep -c chrome'), true);
+  assert.equal(isReadOnlyCommand('git fetch origin --quiet 2>&1 | tail -5'), true);
+  assert.equal(isReadOnlyCommand('node tools/report.mjs > logs/out.txt 2>&1'), false);
+  assert.equal(isReadOnlyCommand('echo hi >> notes.txt'), false);
+});
+
+test('environment tinkering is not a project change', () => {
+  assert.equal(isReadOnlyCommand('unset HTTP_PROXY HTTPS_PROXY http_proxy'), true);
+  assert.equal(isReadOnlyCommand('export NO_PROXY="127.0.0.1,localhost" && git status'), true);
+  assert.equal(isReadOnlyCommand('unset HTTP_PROXY && npm run build'), false);
+});
+
+test('sed reads with -n and writes with -i', () => {
+  assert.equal(isReadOnlyCommand("sed -n '1p;$p' logs/run.log"), true);
+  assert.equal(isReadOnlyCommand("sed -i 's/a/b/' src/app.ts"), false);
+});
+
 test('PowerShell reads do not count as changes', () => {
   for (const command of [
     String.raw`dir "c:\Dev\app\logs" | Select-Object Name | Format-Table -AutoSize`,

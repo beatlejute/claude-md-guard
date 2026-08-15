@@ -75,6 +75,11 @@ too — `Get-Content`, `Select-String`, `dir`, `Set-Location`, a captured
 `ForEach-Object` and `Invoke-*` are deliberately left out: their script blocks
 can do anything, and a false nudge is cheaper than a missed change.
 
+The command is parsed with quotes respected, so the alternation in
+`grep -E "Error|Timeout|failed"` stays inside its argument instead of being
+read as three more commands. `2>/dev/null` and `2>&1` discard output rather
+than write a file; a redirect to a real path does count as a change.
+
 If a CLAUDE.md is large enough to be truncated, the better fix is on your side:
 Claude Code's own guidance is to keep each file under 200 lines, and
 [path-scoped rules](https://code.claude.com/docs/en/memory) in `.claude/rules/`

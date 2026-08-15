@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-08-15
+
+Read from a second real session: 4h43m of work, 104 shell commands, of which
+40 drew a nudge they should not have.
+
+### Fixed
+
+- Command splitting ignored quotes, so `grep -E "Error|Timeout|failed"` came
+  apart into segments named `Timeout` and `failed`, and every log search read
+  as a change to the project. That single bug was most of the 40. The command
+  is now split on `|`, `||`, `&&`, `;` and newlines only outside quotes.
+- `2>/dev/null` and `2>&1` counted as writing to a file, because any `>` did.
+  Redirects are now examined one at a time: a descriptor duplicate or a
+  discard is a read, a real path is a change.
+- `unset`, `export`, `set`, `read`, `cut`, `tr`, `tasklist`, `wmic` and
+  `git fetch` are recognized as reads. `sed` is a read without `-i` and a
+  change with it.
+
+With these, the same 104 commands produce 3 false nudges instead of 40, and
+all three are `node <script>` invocations, where treating the interpreter as
+able to write is the deliberate conservative call.
+
 ## [0.7.1] — 2026-08-15
 
 ### Fixed
@@ -130,6 +152,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.8.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.8.0
 [0.7.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.7.1
 [0.7.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.7.0
 [0.6.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.6.1

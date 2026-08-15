@@ -10,15 +10,16 @@ import { displayPath } from './claude-md.mjs';
 
 /** Commands that change nothing, so no nudge is warranted. */
 const READ_ONLY_COMMANDS = new Set([
-  'awk', 'basename', 'bat', 'cat', 'cd', 'df', 'dirname', 'du', 'echo', 'env',
-  'fd', 'file', 'find', 'grep', 'head', 'hostname', 'jq', 'less', 'ls', 'man',
-  'nl', 'od', 'printenv', 'ps', 'pwd', 'rg', 'sort', 'stat', 'tail', 'tree',
-  'type', 'uname', 'uniq', 'wc', 'whereis', 'which', 'who', 'whoami',
+  'awk', 'basename', 'bat', 'cat', 'cd', 'cut', 'df', 'dirname', 'du', 'echo',
+  'env', 'export', 'fd', 'file', 'find', 'grep', 'head', 'hostname', 'jq',
+  'less', 'ls', 'man', 'nl', 'od', 'printenv', 'ps', 'pwd', 'read', 'rg',
+  'set', 'sort', 'stat', 'tail', 'tasklist', 'tr', 'tree', 'type', 'uname',
+  'uniq', 'unset', 'wc', 'whereis', 'which', 'who', 'whoami', 'wmic',
 ]);
 
 /** git subcommands that only read state. */
 const READ_ONLY_GIT = new Set([
-  'blame', 'branch', 'config', 'describe', 'diff', 'log', 'ls-files',
+  'blame', 'branch', 'config', 'describe', 'diff', 'fetch', 'log', 'ls-files',
   'ls-remote', 'remote', 'rev-parse', 'shortlog', 'show', 'status', 'tag',
 ]);
 
@@ -95,9 +96,82 @@ export function describeTool(toolName, toolInput, config) {
 /** A command counts as read-only only if EVERY one of its segments does. */
 export function isReadOnlyCommand(command) {
   if (!command) return true;
-  if (/[>]{1,2}[^>]/.test(command)) return false; // any redirect into a file
-  const segments = command.split(/\|\||&&|[|;\n]/);
-  return segments.every((segment) => isReadOnlySegment(segment));
+  return splitSegments(command).every(
+    (segment) => !writesToFile(segment) && isReadOnlySegment(segment),
+  );
+}
+
+/**
+ * Splits on `|`, `||`, `&&`, `;` and newlines — but only outside quotes.
+ * A naive split tore `grep -E "Error|Timeout"` into a segment named
+ * "Timeout", so every log search read as a change to the project.
+ */
+function splitSegments(command) {
+  const segments = [];
+  let current = '';
+  let quote = null;
+  for (let i = 0; i < command.length; i += 1) {
+    const char = command[i];
+    if (quote) {
+      current += char;
+      if (char === quote && command[i - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === '|' || char === ';' || char === '\n') {
+      segments.push(current);
+      current = '';
+      if (char === '|' && command[i + 1] === '|') i += 1;
+      continue;
+    }
+    if (char === '&' && command[i + 1] === '&') {
+      segments.push(current);
+      current = '';
+      i += 1;
+      continue;
+    }
+    current += char;
+  }
+  segments.push(current);
+  return segments.filter((segment) => segment.trim());
+}
+
+/**
+ * A redirect that lands in a real file. `2>&1` duplicates a descriptor and
+ * `2>/dev/null` throws output away — neither touches the project, and both
+ * appear in nearly every diagnostic command.
+ */
+function writesToFile(segment) {
+  let quote = null;
+  for (let i = 0; i < segment.length; i += 1) {
+    const char = segment[i];
+    if (quote) {
+      if (char === quote && segment[i - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char !== '>') continue;
+
+    let j = i + 1;
+    if (segment[j] === '>') j += 1;
+    // `>&1` duplicates a descriptor; `>&file` names a file.
+    if (segment[j] === '&') {
+      if (/^\d/.test(segment.slice(j + 1))) continue;
+      return true;
+    }
+    while (segment[j] === ' ') j += 1;
+    const target = segment.slice(j).split(/\s/)[0].replace(/^["']|["']$/g, '');
+    if (!/^(\/dev\/null|nul|NUL)$/.test(target)) return true;
+    i = j;
+  }
+  return false;
 }
 
 function isReadOnlySegment(segment) {
@@ -126,6 +200,9 @@ function isReadOnlySegment(segment) {
   if (lower === 'remove-item' || lower === 'ri' || lower === 'del') {
     return tokens.slice(1).some((token) => /^env:/i.test(token));
   }
+  // `sed -n '1p'` prints; `sed -i` rewrites the file in place.
+  if (lower === 'sed') return !tokens.slice(1).some((token) => /^-\w*i/.test(token));
+
   if (FORMATTING_POWERSHELL.test(binary)) return true;
   if (READ_ONLY_POWERSHELL.has(lower)) return true;
   return READ_ONLY_COMMANDS.has(binary);
