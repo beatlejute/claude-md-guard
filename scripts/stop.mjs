@@ -53,9 +53,9 @@ function render(events, config) {
   } else {
     parts.push(
       'Re-read CLAUDE.md and go through it rule by rule against this turn.',
-      'Show the result in your answer as a checklist headed "CLAUDE.md:", covering the rules that actually bear on this turn:',
+      'End your answer with the line "CLAUDE.md:" as plain text, never as a bullet, then unindented top-level items:',
       '"- [x] <rule>" where the turn followed it, "- [ ] <rule> — <what went wrong and where>" where it did not.',
-      'Leave every other rule out rather than listing it as not applicable, and fix the unchecked ones before finishing.',
+      'Cover only the rules that bear on this turn, leave the rest out rather than listing them as not applicable, and fix the unchecked ones before finishing.',
     );
   }
   return parts.join(' ');

@@ -112,6 +112,7 @@ test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(context, /CLAUDE\.md/);
   assert.match(context, /concludes, analyses or recommends/);
+  assert.match(context, /never as a bullet/, 'the heading must not become a list item');
   assert.match(context, /- \[x\]/, 'the checklist format must be spelled out');
   assert.match(context, /- \[ \]/);
   assert.match(context, /Status updates and short factual replies carry no checklist/, 'status replies must be exempt');

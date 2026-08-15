@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] — 2026-08-15
+
+### Fixed
+
+- The checklist rendered as a bullet with the items nested under it: asking
+  for a checklist "headed CLAUDE.md:" led to the heading itself becoming a
+  list item. Both layers now say the heading is plain text, never a bullet,
+  and the items are unindented and top-level.
+
 ## [0.6.0] — 2026-08-15
 
 ### Changed
@@ -101,6 +110,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.6.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.6.1
 [0.6.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.6.0
 [0.5.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.5.0
 [0.4.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.4.0
