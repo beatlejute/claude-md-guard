@@ -53,8 +53,8 @@ function render(events, config) {
   } else {
     parts.push(
       'Re-read CLAUDE.md and go through it rule by rule against this turn.',
-      'End your answer with the line "CLAUDE.md:" as plain text, never as a bullet, then unindented top-level items:',
-      '"- [x] <rule>" where the turn followed it, "- [ ] <rule> — <what went wrong and where>" where it did not.',
+      'End your answer with the line "CLAUDE.md:" followed by one plain line per rule, with no bullet or indent:',
+      '"[x] <rule>" where the turn followed it, "[ ] <rule> — <what went wrong and where>" where it did not.',
       'Cover only the rules that bear on this turn, leave the rest out rather than listing them as not applicable, and fix the unchecked ones before finishing.',
     );
   }
@@ -80,7 +80,9 @@ function hasComplianceList(lastAssistantMessage) {
   if (typeof lastAssistantMessage !== 'string') return false;
   if (!/CLAUDE\.md/i.test(lastAssistantMessage)) return false;
 
-  const items = lastAssistantMessage.match(/^[^\S\n]*[-*]\s*\[[ xX]\]/gm) || [];
+  // The bullet is optional: the asked-for format is a bare `[x]`, but a model
+  // that reaches for `- [x]` out of markdown habit still produced a checklist.
+  const items = lastAssistantMessage.match(/^[^\S\n]*(?:[-*]\s*)?\[[ xX]\]/gm) || [];
   const verdicts = lastAssistantMessage.match(
     /^[^\S\n]*[-*•]?[^\n]*[—–:-][^\S\n]*(followed|violated|not applicable)\b/gim,
   ) || [];

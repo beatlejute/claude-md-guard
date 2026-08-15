@@ -21,7 +21,7 @@ const BASE =
   'Check your plan and your actions for this turn against CLAUDE.md before acting; where they differ, CLAUDE.md wins.';
 
 const REPORT =
-  ' When your answer concludes, analyses or recommends, end it with the line "CLAUDE.md:" as plain text, never as a bullet, then unindented top-level items: "- [x] <rule>" where you followed it, "- [ ] <rule> — <what and where>" where you did not. Cover only the rules that bear on this turn and fix the unchecked ones first. Status updates and short factual replies carry no checklist.';
+  ' When your answer concludes, analyses or recommends, end it with the line "CLAUDE.md:" followed by one plain line per rule, with no bullet or indent: "[x] <rule>" where you followed it, "[ ] <rule> — <what and where>" where you did not. Cover only the rules that bear on this turn and fix the unchecked ones first. Status updates and short factual replies carry no checklist.';
 
 run(async () => {
   const input = await readInput();

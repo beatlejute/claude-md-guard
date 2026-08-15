@@ -30,9 +30,12 @@ verdict to appear in the answer as a checklist:
 
 ```
 CLAUDE.md:
-- [x] Always answer in Russian
-- [ ] Use markdown links for file references — plain backticks in the summary above
+[x] Always answer in Russian
+[ ] Use markdown links for file references — plain backticks in the summary above
 ```
+
+No bullets: a markdown list marker turns the block into a nested list under the
+heading, and the box carries the meaning on its own.
 
 Naming each rule and its verdict is what makes a skipped rule visible. Only
 rules that actually bear on the turn belong in the list — a rule that does not

@@ -112,9 +112,9 @@ test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(context, /CLAUDE\.md/);
   assert.match(context, /concludes, analyses or recommends/);
-  assert.match(context, /never as a bullet/, 'the heading must not become a list item');
-  assert.match(context, /- \[x\]/, 'the checklist format must be spelled out');
-  assert.match(context, /- \[ \]/);
+  assert.match(context, /no bullet or indent/, 'the format must forbid bullets');
+  assert.match(context, /"\[x\] <rule>"/, 'the checklist format must be spelled out');
+  assert.match(context, /"\[ \] <rule>/);
   assert.match(context, /Status updates and short factual replies carry no checklist/, 'status replies must be exempt');
   assert.ok(context.split('\n').length === 1, 'the reminder must be a single line');
   assert.ok(context.length < 600, `too long: ${context.length}`);
@@ -208,8 +208,8 @@ test('Stop asks for a check after a changing turn and clears the record', () => 
   }, env);
   assert.match(stop.hookSpecificOutput.additionalContext, /README\.md/);
   assert.match(stop.hookSpecificOutput.additionalContext, /CLAUDE\.md/);
-  assert.match(stop.hookSpecificOutput.additionalContext, /- \[x\]/);
-  assert.match(stop.hookSpecificOutput.additionalContext, /- \[ \]/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /"\[x\] <rule>"/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /"\[ \] <rule>/);
 
   const again = runHook('stop.mjs', {
     session_id: 'sess-7',
@@ -237,11 +237,30 @@ test('Stop does not ask again when the answer already carries the list', () => {
       'Done, the client now retries once.',
       '',
       'CLAUDE.md:',
-      '- [x] Answer in Russian',
-      '- [ ] Worktree first for client code — edited on main instead',
+      '[x] Answer in Russian',
+      '[ ] Worktree first for client code — edited on main instead',
     ].join('\n'),
   }, env);
   assert.equal(out, null, 'the checklist is already there; asking again would print it twice');
+});
+
+test('Stop also recognizes a checklist a model wrote with markdown bullets', () => {
+  const env = isolated();
+  const cwd = projectWithRules();
+  runHook('post-tool-use.mjs', {
+    session_id: 'sess-11d',
+    cwd,
+    tool_name: 'Edit',
+    tool_input: { file_path: join(cwd, 'api.ts') },
+  }, env);
+
+  const out = runHook('stop.mjs', {
+    session_id: 'sess-11d',
+    cwd,
+    stop_hook_active: false,
+    last_assistant_message: 'CLAUDE.md:\n- [x] Answer in Russian\n- [ ] Be brief — three paragraphs',
+  }, env);
+  assert.equal(out, null, 'the bullet is a habit, not a different report');
 });
 
 test('Stop recognizes the pre-checklist verdict format too', () => {
@@ -334,7 +353,7 @@ test('Stop falls back to the plain wording when complianceReport is off', () => 
   const stop = runHook('stop.mjs', { session_id: 'sess-7b', cwd, stop_hook_active: false }, env);
   const context = stop.hookSpecificOutput.additionalContext;
   assert.match(context, /notes\.md/);
-  assert.ok(!/- [x]/.test(context));
+  assert.ok(!/\[x\] <rule>/.test(context));
 });
 
 test('Stop still asks for the report when it is limited to changes', () => {

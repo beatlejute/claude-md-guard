@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-08-15
+
+### Changed
+
+- The checklist drops the markdown list marker: plain `[x] rule` lines under
+  the `CLAUDE.md:` heading. The list marker was what nested the block under
+  the heading in the first place, and the box already reads as a box without
+  it. Duplicate detection accepts a leading bullet anyway, since a model may
+  add one out of habit.
+
 ## [0.6.1] — 2026-08-15
 
 ### Fixed
@@ -110,6 +120,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.7.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.7.0
 [0.6.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.6.1
 [0.6.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.6.0
 [0.5.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.5.0
