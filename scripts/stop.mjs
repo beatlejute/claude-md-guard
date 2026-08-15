@@ -53,8 +53,9 @@ function render(events, config) {
   } else {
     parts.push(
       'Re-read CLAUDE.md and go through it rule by rule against this turn.',
-      'End your answer with the line "CLAUDE.md:" followed by one plain line per rule, with no bullet or indent:',
-      '"[x] <rule>" where the turn followed it, "[ ] <rule> — <what went wrong and where>" where it did not.',
+      'End your answer with "**CLAUDE.md**" on its own line, then a blank line, then unindented checklist items:',
+      '"- [x] <rule>" where the turn followed it, "- [ ] <rule> — <what went wrong and where>" where it did not.',
+      'The blank line matters: without it the items nest under the heading instead of rendering as checkboxes.',
       'Cover only the rules that bear on this turn, leave the rest out rather than listing them as not applicable, and fix the unchecked ones before finishing.',
     );
   }

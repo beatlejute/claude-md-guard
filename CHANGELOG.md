@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] — 2026-08-15
+
+### Fixed
+
+- Restored the rendered checkbox. Dropping the list marker in 0.7.0 also
+  dropped the rendering — GFM needs `- [x]` to draw a box, so plain `[x]`
+  lines came out as literal brackets. The marker is back; what actually caused
+  the nesting was the heading being a list line, so it is now bold text
+  followed by a blank line, with the items unindented under it.
+
 ## [0.7.0] — 2026-08-15
 
 ### Changed
@@ -120,6 +130,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.7.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.7.1
 [0.7.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.7.0
 [0.6.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.6.1
 [0.6.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.6.0

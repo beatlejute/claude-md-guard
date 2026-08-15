@@ -29,13 +29,15 @@ easy to satisfy by thinking about it silently and moving on. They ask for the
 verdict to appear in the answer as a checklist:
 
 ```
-CLAUDE.md:
-[x] Always answer in Russian
-[ ] Use markdown links for file references — plain backticks in the summary above
+**CLAUDE.md**
+
+- [x] Always answer in Russian
+- [ ] Use markdown links for file references — plain backticks in the summary above
 ```
 
-No bullets: a markdown list marker turns the block into a nested list under the
-heading, and the box carries the meaning on its own.
+The exact shape is load-bearing. `- [x]` is what renders as a real checkbox,
+and the blank line after a bold heading is what keeps the items from nesting
+underneath it as a sub-list.
 
 Naming each rule and its verdict is what makes a skipped rule visible. Only
 rules that actually bear on the turn belong in the list — a rule that does not

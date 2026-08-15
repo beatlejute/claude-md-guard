@@ -112,9 +112,10 @@ test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(context, /CLAUDE\.md/);
   assert.match(context, /concludes, analyses or recommends/);
-  assert.match(context, /no bullet or indent/, 'the format must forbid bullets');
-  assert.match(context, /"\[x\] <rule>"/, 'the checklist format must be spelled out');
-  assert.match(context, /"\[ \] <rule>/);
+  assert.match(context, /\*\*CLAUDE\.md\*\*/, 'the heading must not be a list item');
+  assert.match(context, /blank line/, 'the blank line is what keeps the items un-nested');
+  assert.match(context, /"- \[x\] <rule>"/, 'the checklist format must be spelled out');
+  assert.match(context, /"- \[ \] <rule>/);
   assert.match(context, /Status updates and short factual replies carry no checklist/, 'status replies must be exempt');
   assert.ok(context.split('\n').length === 1, 'the reminder must be a single line');
   assert.ok(context.length < 600, `too long: ${context.length}`);
@@ -208,8 +209,8 @@ test('Stop asks for a check after a changing turn and clears the record', () => 
   }, env);
   assert.match(stop.hookSpecificOutput.additionalContext, /README\.md/);
   assert.match(stop.hookSpecificOutput.additionalContext, /CLAUDE\.md/);
-  assert.match(stop.hookSpecificOutput.additionalContext, /"\[x\] <rule>"/);
-  assert.match(stop.hookSpecificOutput.additionalContext, /"\[ \] <rule>/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /"- \[x\] <rule>"/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /"- \[ \] <rule>/);
 
   const again = runHook('stop.mjs', {
     session_id: 'sess-7',
