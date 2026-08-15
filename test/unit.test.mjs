@@ -72,6 +72,45 @@ test('sed reads with -n and writes with -i', () => {
   assert.equal(isReadOnlyCommand("sed -i 's/a/b/' src/app.ts"), false);
 });
 
+test('a here-document body is not parsed as shell', () => {
+  const heredoc = [
+    "cat <<'EOF'",
+    'import json',
+    'except: continue',
+    'rm -rf everything',
+    'EOF',
+  ].join('\n');
+  assert.equal(isReadOnlyCommand(heredoc), true, 'the body belongs to cat, not to the shell');
+
+  assert.equal(
+    isReadOnlyCommand("python - <<'PY'\nprint(1)\nPY"),
+    false,
+    'the interpreter itself is still treated as able to write',
+  );
+});
+
+test('shell block keywords are not commands', () => {
+  assert.equal(isReadOnlyCommand('for f in *.log; do grep error "$f"; done'), true);
+  assert.equal(isReadOnlyCommand('for f in *.tmp; do rm "$f"; done'), false);
+  assert.equal(isReadOnlyCommand('if [ -f app.log ]; then tail -5 app.log; fi'), true);
+  assert.equal(isReadOnlyCommand('if [ -f app.log ]; then mv app.log old.log; fi'), false);
+});
+
+test('env is unwrapped rather than trusted', () => {
+  assert.equal(isReadOnlyCommand('env -u HTTP_PROXY -u HTTPS_PROXY grep -n x logs/run.log'), true);
+  assert.equal(isReadOnlyCommand('env -u HTTP_PROXY NO_PROXY=127.0.0.1 npm run build'), false);
+  assert.equal(isReadOnlyCommand('env'), true);
+});
+
+test('printf and friends read', () => {
+  assert.equal(isReadOnlyCommand(`printf '%s\\n' '--- FILES ---'; find . -name '*.spec.ts'`), true);
+  assert.equal(isReadOnlyCommand('git -C /c/Dev/app merge-base --is-ancestor abc HEAD'), true);
+  assert.equal(isReadOnlyCommand('git worktree list'), true);
+  assert.equal(isReadOnlyCommand('git worktree add ../wt branch'), false);
+  assert.equal(isReadOnlyCommand('unzip -l trace.zip'), true);
+  assert.equal(isReadOnlyCommand('unzip trace.zip'), false);
+});
+
 test('PowerShell reads do not count as changes', () => {
   for (const command of [
     String.raw`dir "c:\Dev\app\logs" | Select-Object Name | Format-Table -AutoSize`,

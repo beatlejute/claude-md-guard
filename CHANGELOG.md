@@ -4,6 +4,33 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] — 2026-08-15
+
+From a third session: 56 shell commands, 23 of them nudged without cause.
+
+### Fixed
+
+- Here-document bodies were parsed as shell. In `python - <<'PY' … PY` every
+  line of the Python — `import json`, `except: continue` — read as an
+  unrecognized command. The body is now skipped; the opening command is still
+  judged on its own.
+- Shell block keywords read as command names: `for`, `do`, `done`, `if`,
+  `then`. A block header runs nothing, so it is a read; the body arrives as
+  its own segment after `do` and is judged there, which is where
+  `for f in *.tmp; do rm "$f"; done` is caught.
+- `env` was in the read-only list, so `env -u HTTP_PROXY npm run build`
+  counted as a read — a missed change, not just noise. `env` and its options
+  are now stripped and the real command is judged.
+- Added as reads: `printf`, `test`/`[`, `xxd`, `base64`, `date`, `diff`,
+  `seq`, `sleep`, `column`, `comm`, `id`, `readlink`, `realpath`, and the
+  git subcommands `merge-base`, `cat-file`, `rev-list`, `for-each-ref`,
+  `name-rev`, `symbolic-ref`, `count-objects`. `unzip` reads with `-l`/`-p`
+  and extracts without. `git worktree list` reads, `add` and `remove` do not.
+
+Across both measured sessions the remaining false nudges are 11 of 56 and 2
+of 104, and every one of them is a `python` or `node` invocation, where
+treating an interpreter as able to write is the deliberate call.
+
 ## [0.8.0] — 2026-08-15
 
 Read from a second real session: 4h43m of work, 104 shell commands, of which
@@ -152,6 +179,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.9.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.9.0
 [0.8.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.8.0
 [0.7.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.7.1
 [0.7.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.7.0

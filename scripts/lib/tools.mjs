@@ -10,17 +10,23 @@ import { displayPath } from './claude-md.mjs';
 
 /** Commands that change nothing, so no nudge is warranted. */
 const READ_ONLY_COMMANDS = new Set([
-  'awk', 'basename', 'bat', 'cat', 'cd', 'cut', 'df', 'dirname', 'du', 'echo',
-  'env', 'export', 'fd', 'file', 'find', 'grep', 'head', 'hostname', 'jq',
-  'less', 'ls', 'man', 'nl', 'od', 'printenv', 'ps', 'pwd', 'read', 'rg',
-  'set', 'sort', 'stat', 'tail', 'tasklist', 'tr', 'tree', 'type', 'uname',
-  'uniq', 'unset', 'wc', 'whereis', 'which', 'who', 'whoami', 'wmic',
+  '[', 'awk', 'base64', 'basename', 'bat', 'cat', 'cd', 'column', 'comm',
+  // `env` is deliberately absent: bare `env` prints, but `env VAR=1 npm run
+  // build` runs. It is stripped as a prefix so the real command is judged.
+  'cut', 'date', 'df', 'diff', 'dirname', 'du', 'echo', 'export', 'fd',
+  'file', 'find', 'grep', 'head', 'hostname', 'id', 'jq', 'less', 'ls', 'man',
+  'md5sum', 'nl', 'od', 'printenv', 'printf', 'ps', 'pwd', 'read', 'readlink',
+  'realpath', 'rg', 'seq', 'set', 'sha256sum', 'sleep', 'sort', 'stat', 'tail',
+  'tasklist', 'test', 'tr', 'tree', 'type', 'uname', 'uniq', 'unset', 'wc',
+  'whereis', 'which', 'who', 'whoami', 'wmic', 'xxd',
 ]);
 
 /** git subcommands that only read state. */
 const READ_ONLY_GIT = new Set([
-  'blame', 'branch', 'config', 'describe', 'diff', 'fetch', 'log', 'ls-files',
-  'ls-remote', 'remote', 'rev-parse', 'shortlog', 'show', 'status', 'tag',
+  'blame', 'branch', 'cat-file', 'config', 'count-objects', 'describe', 'diff',
+  'fetch', 'for-each-ref', 'log', 'ls-files', 'ls-remote', 'merge-base',
+  'name-rev', 'remote', 'rev-list', 'rev-parse', 'shortlog', 'show',
+  'status', 'symbolic-ref', 'tag',
 ]);
 
 /**
@@ -49,6 +55,15 @@ const FORMATTING_POWERSHELL = /^format-(table|list|wide|custom)$/i;
 
 /** Wrappers to strip before the real command becomes visible. */
 const WRAPPERS = new Set(['rtk', 'sudo', 'command', 'time', 'nice', 'nohup', 'proxy']);
+
+/** Shell keywords that open a block: the header itself runs nothing. */
+const BLOCK_HEADERS = new Set(['for', 'while', 'until', 'if', 'elif', 'case', 'select']);
+
+/** Keywords that precede a real command in the same segment. */
+const BLOCK_PREFIXES = new Set(['do', 'then', 'else', '{', '(', '!']);
+
+/** Keywords that close a block, or are no-ops on their own. */
+const BLOCK_ENDS = new Set(['done', 'fi', 'esac', '}', ')', ';;', 'true', 'false', ':']);
 
 /** Tools that change nothing, even if the matcher let them through. */
 const READ_ONLY_TOOLS = new Set([
@@ -96,9 +111,32 @@ export function describeTool(toolName, toolInput, config) {
 /** A command counts as read-only only if EVERY one of its segments does. */
 export function isReadOnlyCommand(command) {
   if (!command) return true;
-  return splitSegments(command).every(
+  return splitSegments(stripHeredocs(command)).every(
     (segment) => !writesToFile(segment) && isReadOnlySegment(segment),
   );
+}
+
+/**
+ * Removes here-document bodies, keeping the line that opens them.
+ *
+ * The body belongs to another interpreter — `python - <<'PY' … PY` carries
+ * Python, not shell — and parsing it as shell turned every `import json` and
+ * `except: continue` into an unrecognized command.
+ */
+function stripHeredocs(command) {
+  if (!command.includes('<<')) return command;
+  const kept = [];
+  let marker = null;
+  for (const line of command.split('\n')) {
+    if (marker !== null) {
+      if (line.trim() === marker) marker = null;
+      continue;
+    }
+    kept.push(line);
+    const opener = line.match(/<<-?\s*(['"]?)([A-Za-z_]\w*)\1/);
+    if (opener) marker = opener[2];
+  }
+  return kept.join('\n');
 }
 
 /**
@@ -175,11 +213,11 @@ function writesToFile(segment) {
 }
 
 function isReadOnlySegment(segment) {
-  const tokens = stripAssignment(tokenize(segment));
-  while (tokens.length > 0 && (WRAPPERS.has(tokens[0]) || tokens[0].includes('='))) {
-    tokens.shift();
-  }
+  const tokens = stripPrefixes(stripAssignment(tokenize(segment)));
   if (tokens.length === 0) return true;
+  // `for f in *.log` and `done` execute nothing; the body arrives as its own
+  // segment after `do`, and is judged there.
+  if (BLOCK_HEADERS.has(tokens[0]) || BLOCK_ENDS.has(tokens[0])) return true;
 
   const binary = tokens[0]
     .replace(/^[(&$]+/, '') // `(Get-Content ...)`, `& cmd`
@@ -194,7 +232,10 @@ function isReadOnlySegment(segment) {
 
   if (lower === 'git') {
     const sub = gitSubcommand(tokens);
-    return sub ? READ_ONLY_GIT.has(sub) : true;
+    if (!sub) return true;
+    // `git worktree list` reads; `add` and `remove` do not.
+    if (sub === 'worktree') return tokens[tokens.indexOf(sub) + 1] === 'list';
+    return READ_ONLY_GIT.has(sub);
   }
   // Removing environment variables touches this process, not the project.
   if (lower === 'remove-item' || lower === 'ri' || lower === 'del') {
@@ -202,6 +243,8 @@ function isReadOnlySegment(segment) {
   }
   // `sed -n '1p'` prints; `sed -i` rewrites the file in place.
   if (lower === 'sed') return !tokens.slice(1).some((token) => /^-\w*i/.test(token));
+  // `unzip -l` lists, `unzip -p` pipes; bare `unzip` extracts to disk.
+  if (lower === 'unzip') return tokens.slice(1).some((token) => /^-\w*[ltpvz]/.test(token));
 
   if (FORMATTING_POWERSHELL.test(binary)) return true;
   if (READ_ONLY_POWERSHELL.has(lower)) return true;
@@ -224,6 +267,38 @@ function gitSubcommand(tokens) {
     return token;
   }
   return null;
+}
+
+/**
+ * Strips everything in front of the command that actually runs: wrappers,
+ * block keywords, inline `VAR=value` assignments, and an `env` invocation
+ * with its own options, so `env -u HTTP_PROXY npm run build` is judged as
+ * `npm run build`.
+ */
+function stripPrefixes(tokens) {
+  let inEnv = false;
+  while (tokens.length > 0) {
+    const token = tokens[0];
+    if (token === 'env') {
+      tokens.shift();
+      inEnv = true;
+      continue;
+    }
+    if (inEnv && token === '-u' && tokens.length > 1) {
+      tokens.splice(0, 2);
+      continue;
+    }
+    if (inEnv && token.startsWith('-')) {
+      tokens.shift();
+      continue;
+    }
+    if (WRAPPERS.has(token) || BLOCK_PREFIXES.has(token) || token.includes('=')) {
+      tokens.shift();
+      continue;
+    }
+    break;
+  }
+  return tokens;
 }
 
 /**

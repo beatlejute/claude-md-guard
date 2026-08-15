@@ -77,8 +77,17 @@ can do anything, and a false nudge is cheaper than a missed change.
 
 The command is parsed with quotes respected, so the alternation in
 `grep -E "Error|Timeout|failed"` stays inside its argument instead of being
-read as three more commands. `2>/dev/null` and `2>&1` discard output rather
-than write a file; a redirect to a real path does count as a change.
+read as three more commands. Here-document bodies are skipped — the Python
+inside `python - <<'PY' … PY` is not shell. Block keywords are understood:
+`for f in *.log; do grep x "$f"; done` reads, the same loop around `rm` does
+not. `env -u HTTP_PROXY npm run build` is judged as `npm run build` rather
+than as `env`. `2>/dev/null` and `2>&1` discard output rather than write a
+file; a redirect to a real path does count as a change.
+
+What deliberately stays on the cautious side: `python`, `node` and other
+interpreters count as changes whatever their arguments say, because a script
+can write anything. In two measured sessions that is the only remaining source
+of false nudges.
 
 If a CLAUDE.md is large enough to be truncated, the better fix is on your side:
 Claude Code's own guidance is to keep each file under 200 lines, and
