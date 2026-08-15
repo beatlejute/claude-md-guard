@@ -111,11 +111,12 @@ test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {
   const context = out.hookSpecificOutput.additionalContext;
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(context, /CLAUDE\.md/);
-  assert.match(context, /draws conclusions/);
-  assert.match(context, /followed or violated/);
-  assert.match(context, /Status updates.*no such list/, 'status replies must be exempt');
+  assert.match(context, /concludes, analyses or recommends/);
+  assert.match(context, /- \[x\]/, 'the checklist format must be spelled out');
+  assert.match(context, /- \[ \]/);
+  assert.match(context, /Status updates and short factual replies carry no checklist/, 'status replies must be exempt');
   assert.ok(context.split('\n').length === 1, 'the reminder must be a single line');
-  assert.ok(context.length < 500, `too long: ${context.length}`);
+  assert.ok(context.length < 600, `too long: ${context.length}`);
 });
 
 test('the 0.2.0 name "always" still selects the analysis level', () => {
@@ -125,7 +126,7 @@ test('the 0.2.0 name "always" still selects the analysis level', () => {
     cwd: projectWithRules(),
     prompt: 'refactor this',
   }, env);
-  assert.match(out.hookSpecificOutput.additionalContext, /draws conclusions/);
+  assert.match(out.hookSpecificOutput.additionalContext, /concludes, analyses or recommends/);
 });
 
 test('UserPromptSubmit drops the report demand when complianceReport is off', () => {
@@ -138,7 +139,7 @@ test('UserPromptSubmit drops the report demand when complianceReport is off', ()
 
   const context = out.hookSpecificOutput.additionalContext;
   assert.match(context, /CLAUDE\.md/);
-  assert.ok(!/draws conclusions/.test(context), 'the report demand must be gone');
+  assert.ok(!/concludes, analyses or recommends/.test(context), 'the report demand must be gone');
   assert.ok(context.length < 200, `too long: ${context.length}`);
 });
 
@@ -150,7 +151,7 @@ test('UserPromptSubmit stays short when complianceReport is limited to changes',
     prompt: 'refactor this',
   }, env);
 
-  assert.ok(!/draws conclusions/.test(out.hookSpecificOutput.additionalContext));
+  assert.ok(!/concludes, analyses or recommends/.test(out.hookSpecificOutput.additionalContext));
 });
 
 test('PostToolUse nudges after Edit and stays quiet after a read', () => {
@@ -206,8 +207,8 @@ test('Stop asks for a check after a changing turn and clears the record', () => 
   }, env);
   assert.match(stop.hookSpecificOutput.additionalContext, /README\.md/);
   assert.match(stop.hookSpecificOutput.additionalContext, /CLAUDE\.md/);
-  assert.match(stop.hookSpecificOutput.additionalContext, /followed/);
-  assert.match(stop.hookSpecificOutput.additionalContext, /violated/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /- \[x\]/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /- \[ \]/);
 
   const again = runHook('stop.mjs', {
     session_id: 'sess-7',
@@ -234,11 +235,50 @@ test('Stop does not ask again when the answer already carries the list', () => {
     last_assistant_message: [
       'Done, the client now retries once.',
       '',
-      '- Answer in Russian — followed',
-      '- Worktree first for client code — violated: edited on main',
+      'CLAUDE.md:',
+      '- [x] Answer in Russian',
+      '- [ ] Worktree first for client code — edited on main instead',
     ].join('\n'),
   }, env);
-  assert.equal(out, null, 'the list is already there; asking again would print it twice');
+  assert.equal(out, null, 'the checklist is already there; asking again would print it twice');
+});
+
+test('Stop recognizes the pre-checklist verdict format too', () => {
+  const env = isolated();
+  const cwd = projectWithRules();
+  runHook('post-tool-use.mjs', {
+    session_id: 'sess-11b',
+    cwd,
+    tool_name: 'Edit',
+    tool_input: { file_path: join(cwd, 'api.ts') },
+  }, env);
+
+  const out = runHook('stop.mjs', {
+    session_id: 'sess-11b',
+    cwd,
+    stop_hook_active: false,
+    last_assistant_message: 'CLAUDE.md:\n- Answer in Russian — followed\n- Worktree first — violated: edited on main',
+  }, env);
+  assert.equal(out, null);
+});
+
+test('Stop is not fooled by an ordinary plan written as checkboxes', () => {
+  const env = isolated();
+  const cwd = projectWithRules();
+  runHook('post-tool-use.mjs', {
+    session_id: 'sess-11c',
+    cwd,
+    tool_name: 'Edit',
+    tool_input: { file_path: join(cwd, 'api.ts') },
+  }, env);
+
+  const out = runHook('stop.mjs', {
+    session_id: 'sess-11c',
+    cwd,
+    stop_hook_active: false,
+    last_assistant_message: 'Plan:\n- [x] add the retry\n- [ ] cover it with a test',
+  }, env);
+  assert.ok(out, 'a plan is not a compliance checklist');
 });
 
 test('Stop still asks when the answer only mentions a verdict word in prose', () => {
@@ -293,7 +333,7 @@ test('Stop falls back to the plain wording when complianceReport is off', () => 
   const stop = runHook('stop.mjs', { session_id: 'sess-7b', cwd, stop_hook_active: false }, env);
   const context = stop.hookSpecificOutput.additionalContext;
   assert.match(context, /notes\.md/);
-  assert.ok(!/one line per applicable rule/.test(context));
+  assert.ok(!/- [x]/.test(context));
 });
 
 test('Stop still asks for the report when it is limited to changes', () => {

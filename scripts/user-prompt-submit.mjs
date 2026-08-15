@@ -21,7 +21,7 @@ const BASE =
   'Check your plan and your actions for this turn against CLAUDE.md before acting; where they differ, CLAUDE.md wins.';
 
 const REPORT =
-  ' When your answer draws conclusions, analyses something, or recommends an action, close it with one line per CLAUDE.md rule that actually bears on this turn, each marked followed or violated, and fix what is violated first. Leave the other rules out entirely rather than listing them as not applicable. Status updates, acknowledgements and short factual replies carry no such list.';
+  ' When your answer concludes, analyses or recommends, close it with a checklist headed "CLAUDE.md:" — "- [x] <rule>" where you followed it, "- [ ] <rule> — <what and where>" where you did not — covering only the rules that bear on this turn, and fix the unchecked ones first. Status updates and short factual replies carry no checklist.';
 
 run(async () => {
   const input = await readInput();

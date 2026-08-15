@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-08-15
+
+### Changed
+
+- The compliance report is now a checklist headed `CLAUDE.md:` — `- [x] rule`
+  for a rule the turn followed, `- [ ] rule — what and where` for one it
+  broke. Shorter than the previous `rule — followed` lines and scannable at a
+  glance, with the unchecked boxes standing out as the things to fix.
+- Duplicate detection understands both the checklist and the older verdict
+  format, and now requires the message to name CLAUDE.md, so an ordinary plan
+  written as checkboxes no longer suppresses a check that is genuinely due.
+
 ## [0.5.0] — 2026-08-15
 
 Found by reading a real session log: a two-and-a-half hour diagnostic session
@@ -89,6 +101,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.6.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.6.0
 [0.5.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.5.0
 [0.4.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.4.0
 [0.3.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.3.0

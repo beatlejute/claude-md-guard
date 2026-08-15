@@ -53,9 +53,9 @@ function render(events, config) {
   } else {
     parts.push(
       'Re-read CLAUDE.md and go through it rule by rule against this turn.',
-      'Show the result in your answer as one line per rule that actually bears on this turn, in the form',
-      '"<rule> — followed" or "<rule> — violated: <what and where>".',
-      'Leave every other rule out entirely rather than listing it as not applicable, and fix what is violated before finishing.',
+      'Show the result in your answer as a checklist headed "CLAUDE.md:", covering the rules that actually bear on this turn:',
+      '"- [x] <rule>" where the turn followed it, "- [ ] <rule> — <what went wrong and where>" where it did not.',
+      'Leave every other rule out rather than listing it as not applicable, and fix the unchecked ones before finishing.',
     );
   }
   return parts.join(' ');
@@ -69,16 +69,20 @@ function describe(event) {
 }
 
 /**
- * Does the finished answer already carry a rule-by-rule list?
+ * Does the finished answer already carry the checklist?
  *
- * Two or more lines ending in the verdict word is the signature; one stray
- * mention of "followed" in prose is not. Matched case-insensitively and
- * across the dash characters models actually produce.
+ * Two or more checklist items, or two or more lines ending in a verdict word
+ * for answers written before the checklist format, and CLAUDE.md named
+ * somewhere in the message. That last condition is what separates a compliance
+ * checklist from an ordinary plan written as checkboxes.
  */
 function hasComplianceList(lastAssistantMessage) {
   if (typeof lastAssistantMessage !== 'string') return false;
+  if (!/CLAUDE\.md/i.test(lastAssistantMessage)) return false;
+
+  const items = lastAssistantMessage.match(/^[^\S\n]*[-*]\s*\[[ xX]\]/gm) || [];
   const verdicts = lastAssistantMessage.match(
     /^[^\S\n]*[-*•]?[^\n]*[—–:-][^\S\n]*(followed|violated|not applicable)\b/gim,
-  );
-  return Boolean(verdicts) && verdicts.length >= 2;
+  ) || [];
+  return items.length >= 2 || verdicts.length >= 2;
 }

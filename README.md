@@ -26,20 +26,23 @@ Four layers, cheapest first:
 
 Layers 2 and 4 do not stop at "verify against the rules" — that request is
 easy to satisfy by thinking about it silently and moving on. They ask for the
-verdict to appear in the answer, one line per applicable rule:
+verdict to appear in the answer as a checklist:
 
 ```
-- Always answer in Russian — followed
-- Use markdown links for file references — violated: plain backticks in the summary above
+CLAUDE.md:
+- [x] Always answer in Russian
+- [ ] Use markdown links for file references — plain backticks in the summary above
 ```
 
 Naming each rule and its verdict is what makes a skipped rule visible. Only
 rules that actually bear on the turn belong in the list — a rule that does not
 apply is left out, not listed as "not applicable".
 
-The list is printed once. Layer 4 reads `last_assistant_message`, and if the
-answer already carries a list it stays silent instead of asking for a second
-one, which also saves the extra model round.
+The checklist is printed once. Layer 4 reads `last_assistant_message`, and if
+the answer already carries one it stays silent instead of asking for a second,
+which also saves the extra model round. An ordinary plan written as checkboxes
+does not count — the message has to name CLAUDE.md for it to read as a
+compliance checklist.
 
 The list is asked for where there is something to judge — a conclusion, an
 analysis, a recommendation. Status updates, acknowledgements and one-line
