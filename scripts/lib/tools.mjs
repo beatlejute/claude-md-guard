@@ -22,6 +22,30 @@ const READ_ONLY_GIT = new Set([
   'ls-remote', 'remote', 'rev-parse', 'shortlog', 'show', 'status', 'tag',
 ]);
 
+/**
+ * PowerShell cmdlets and aliases that only read. Matched case-insensitively,
+ * because PowerShell is. Deliberately absent: ForEach-Object and Invoke-*,
+ * whose script blocks can do anything — a false nudge there is cheaper than a
+ * missed change.
+ */
+const READ_ONLY_POWERSHELL = new Set([
+  'compare-object', 'convertfrom-json', 'convertfrom-string', 'convertto-json',
+  'get-alias', 'get-childitem', 'get-command', 'get-content', 'get-date',
+  'get-help', 'get-history', 'get-item', 'get-itemproperty', 'get-location',
+  'get-member', 'get-module', 'get-process', 'get-service', 'get-variable',
+  'group-object', 'join-path', 'measure-object', 'out-host', 'out-string',
+  'pop-location', 'push-location', 'resolve-path', 'select-object',
+  'select-string', 'set-location', 'sort-object', 'split-path', 'test-path',
+  'where-object', 'write-host', 'write-output',
+  // aliases
+  'cd', 'chdir', 'dir', 'gc', 'gci', 'gcm', 'gi', 'gl', 'gm', 'group', 'gv',
+  'measure', 'popd', 'pushd', 'sls', 'sort', 'where', 'select', 'ft', 'fl',
+  'ls', 'cat', 'echo', 'pwd', 'type',
+]);
+
+/** Formatting cmdlets: harmless anywhere in a pipeline. */
+const FORMATTING_POWERSHELL = /^format-(table|list|wide|custom)$/i;
+
 /** Wrappers to strip before the real command becomes visible. */
 const WRAPPERS = new Set(['rtk', 'sudo', 'command', 'time', 'nice', 'nohup', 'proxy']);
 
@@ -77,18 +101,67 @@ export function isReadOnlyCommand(command) {
 }
 
 function isReadOnlySegment(segment) {
-  const tokens = tokenize(segment);
+  const tokens = stripAssignment(tokenize(segment));
   while (tokens.length > 0 && (WRAPPERS.has(tokens[0]) || tokens[0].includes('='))) {
     tokens.shift();
   }
   if (tokens.length === 0) return true;
 
-  const binary = tokens[0].split(/[\\/]/).pop().replace(/\.(exe|cmd|bat|ps1)$/i, '');
-  if (binary === 'git') {
-    const sub = tokens.slice(1).find((token) => !token.startsWith('-'));
+  const binary = tokens[0]
+    .replace(/^[(&$]+/, '') // `(Get-Content ...)`, `& cmd`
+    .split(/[\\/]/)
+    .pop()
+    .replace(/\.(exe|cmd|bat|ps1)$/i, '');
+  const lower = binary.toLowerCase();
+
+  // A bare `$c.Length` prints a value; `$file.Delete()` does not, hence the
+  // parenthesis check.
+  if (tokens[0].startsWith('$') && !tokens[0].includes('(')) return true;
+
+  if (lower === 'git') {
+    const sub = gitSubcommand(tokens);
     return sub ? READ_ONLY_GIT.has(sub) : true;
   }
+  // Removing environment variables touches this process, not the project.
+  if (lower === 'remove-item' || lower === 'ri' || lower === 'del') {
+    return tokens.slice(1).some((token) => /^env:/i.test(token));
+  }
+  if (FORMATTING_POWERSHELL.test(binary)) return true;
+  if (READ_ONLY_POWERSHELL.has(lower)) return true;
   return READ_ONLY_COMMANDS.has(binary);
+}
+
+/**
+ * The subcommand in a git call, skipping the global options that take a value.
+ * Without the skip, `git -C /repo log` reads as the subcommand "/repo".
+ */
+function gitSubcommand(tokens) {
+  const takesValue = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace']);
+  for (let i = 1; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (takesValue.has(token)) {
+      i += 1;
+      continue;
+    }
+    if (token.startsWith('-')) continue;
+    return token;
+  }
+  return null;
+}
+
+/**
+ * Drops a leading PowerShell assignment: `$c = Get-Content x` is read-only
+ * exactly when its right-hand side is. Without this every captured pipeline
+ * counted as a change.
+ */
+function stripAssignment(tokens) {
+  if (tokens.length >= 2 && /^\$[\w:.]+$/.test(tokens[0]) && tokens[1] === '=') {
+    return tokens.slice(2);
+  }
+  if (tokens.length >= 1 && /^\$[\w:.]+=$/.test(tokens[0])) {
+    return tokens.slice(1);
+  }
+  return tokens;
 }
 
 function tokenize(segment) {

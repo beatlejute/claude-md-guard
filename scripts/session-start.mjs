@@ -48,11 +48,18 @@ function render(bundle, source, config) {
     );
   }
 
+  const truncated = bundle.included.filter((file) => file.truncated);
+  const verbatim = truncated.length === 0
+    ? 'The text above is the verbatim content of those files.'
+    : `The text above is the content of those files, with ${truncated
+      .map((file) => displayPath(file.path))
+      .join(', ')} cut short at the context budget.`;
+
   parts.push(
     message(
       config,
       'sessionFooter',
-      'The text above is the verbatim content of those files. It is the standing configuration for this session and applies to every turn in it, including turns after a context compaction.',
+      `${verbatim} It is the standing configuration for this session and applies to every turn in it, including turns after a context compaction.`,
     ),
   );
   return parts.join('\n');

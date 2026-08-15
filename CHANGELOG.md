@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-08-15
+
+Found by reading a real session log: a two-and-a-half hour diagnostic session
+where the plugin was active, no file was edited, and it still produced 18
+nudges and 14 Stop demands while delivering the rules only in part.
+
+### Fixed
+
+- The character budget did not apply to the most specific file, so a single
+  12 KB project CLAUDE.md was injected whole. Claude Code then filed the
+  injection away and passed the model a 2 KB preview and a path — the layer
+  delivered less than doing nothing would have. That file is now truncated
+  on a line boundary with a notice, and the footer names what was cut. Less
+  specific files are still dropped whole rather than delivered as fragments.
+- The read-only filter knew POSIX commands only, so on Windows it recognized
+  nothing: `Get-Content`, `Select-String`, `dir`, `Set-Location`,
+  `$c = Get-Content …` and `Remove-Item Env:…` all counted as changes. That
+  is what produced the 18 nudges and, through the turn record, the 14 Stop
+  demands and their compliance lists. PowerShell cmdlets and aliases are now
+  recognized, assignments are unwrapped, and a bare `$c.Length` is a read
+  while `$file.Delete()` is not.
+- `git -C <path> log` read as the subcommand `<path>` and counted as a change.
+  Global git options that take a value are now skipped.
+
 ## [0.4.0] — 2026-08-15
 
 ### Fixed
@@ -65,6 +89,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.5.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.5.0
 [0.4.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.4.0
 [0.3.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.3.0
 [0.2.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.2.0

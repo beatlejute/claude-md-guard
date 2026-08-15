@@ -18,6 +18,8 @@ import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
 const MAX_TREE_DEPTH = 20;
 const DEFAULT_BUDGET = 9000;
+/** Below this a file's remaining slice is too small to be worth including. */
+const MIN_FILE_CHARS = 200;
 
 /** Path to the machine-wide (managed policy) CLAUDE.md for this OS. */
 export function managedPolicyPath() {
@@ -219,22 +221,44 @@ export function buildBundle(cwd, config) {
     .filter((file) => file.body.length > 0);
 
   const budget = Math.max(500, Number(config.maxChars) || DEFAULT_BUDGET);
-  const keep = new Set();
-  let used = 0;
-  for (const file of [...prepared].sort((a, b) => b.priority - a.priority)) {
-    const cost = file.body.length + file.path.length + 40;
-    if (used + cost > budget && keep.size > 0) continue;
-    keep.add(file.path);
-    used += cost;
+  const fitted = new Map();
+  let left = budget;
+  for (const [index, file] of [...prepared].sort((a, b) => b.priority - a.priority).entries()) {
+    const room = left - (file.path.length + 40);
+    if (room < MIN_FILE_CHARS) continue;
+
+    let body = file.body;
+    if (body.length > room) {
+      // Truncation is the emergency measure for the most specific file — a
+      // project CLAUDE.md bigger than the whole budget used to be injected
+      // whole, and Claude Code then filed the injection away and passed the
+      // model a 2 KB preview instead. Less specific files are dropped whole
+      // rather than delivered as fragments.
+      if (index > 0) continue;
+      body = truncateBody(body, room);
+    }
+    fitted.set(file.path, body);
+    left -= body.length + file.path.length + 40;
   }
 
-  const included = prepared.filter((file) => keep.has(file.path));
-  const skipped = prepared.filter((file) => !keep.has(file.path));
+  const included = prepared
+    .filter((file) => fitted.has(file.path))
+    .map((file) => ({ ...file, body: fitted.get(file.path), truncated: fitted.get(file.path).length < file.body.length }));
+  const skipped = prepared.filter((file) => !fitted.has(file.path));
   const text = included
     .map((file) => `### ${displayPath(file.path)}\n${file.body}`)
     .join('\n\n');
 
   return { text, included, skipped, chars: text.length };
+}
+
+/** Cuts on a line boundary and says so, so the model knows what it is missing. */
+function truncateBody(body, room) {
+  const notice = '\n\n[truncated by claude-md-guard: read this file in full if a rule seems to be missing]';
+  const keep = Math.max(0, room - notice.length);
+  const cut = body.slice(0, keep);
+  const lastBreak = cut.lastIndexOf('\n');
+  return (lastBreak > keep * 0.5 ? cut.slice(0, lastBreak) : cut).trimEnd() + notice;
 }
 
 /** Home directory collapses to ~ — shorter, and it hides the user name. */

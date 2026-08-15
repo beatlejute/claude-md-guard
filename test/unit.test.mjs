@@ -41,6 +41,36 @@ test('state-changing commands are recognized', () => {
   }
 });
 
+test('PowerShell reads do not count as changes', () => {
+  for (const command of [
+    String.raw`dir "c:\Dev\app\logs" | Select-Object Name | Format-Table -AutoSize`,
+    String.raw`Get-ChildItem c:\Dev\app | Select-Object Name`,
+    String.raw`Set-Location c:\Dev\app; Get-Content logs\run.log -Tail 50`,
+    String.raw`Set-Location c:\Dev\app; $c = Get-Content logs\run.log -Raw; $c.Length`,
+    String.raw`Set-Location c:\Dev\app; $c = (Get-Content logs\run.log -Raw) -replace "a","b"`,
+    String.raw`Select-String -Path helpers\*.ts -Pattern foo`,
+    'Remove-Item Env:HTTP_PROXY,Env:HTTPS_PROXY -EA SilentlyContinue',
+    String.raw`git -C c:\Dev\app log --oneline -3`,
+    'Get-Content package.json | ConvertFrom-Json | Select-Object name',
+  ]) {
+    assert.equal(isReadOnlyCommand(command), true, command);
+  }
+});
+
+test('PowerShell writes are still recognized as changes', () => {
+  for (const command of [
+    'Remove-Item build -Recurse -Force',
+    'Set-Content notes.txt "hi"',
+    'New-Item -ItemType Directory dist',
+    'Get-Content a.txt | Out-File b.txt',
+    'Get-ChildItem | ForEach-Object { Remove-Item $_ }',
+    String.raw`Set-Location c:\Dev\app; npm run build`,
+    '$file.Delete()',
+  ]) {
+    assert.equal(isReadOnlyCommand(command), false, command);
+  }
+});
+
 test('describeTool tells tools apart', () => {
   assert.equal(describeTool('Read', { file_path: '/a/b.ts' }, config).mutating, false);
   assert.equal(describeTool('Edit', { file_path: '/a/b.ts' }, config).mutating, true);
@@ -100,6 +130,30 @@ test('buildBundle collects rules and respects the budget', () => {
     const tight = buildBundle(project, { ...config, includeManaged: false, maxChars: 500 });
     assert.match(tight.text, /project rule/, 'the file closest to cwd survives');
     assert.equal(tight.skipped.length, 1, 'the less specific one is dropped');
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevProfile;
+  }
+});
+
+test('a single file larger than the budget is truncated, not passed whole', () => {
+  const home = sandbox();
+  const project = sandbox();
+  const prevHome = process.env.HOME;
+  const prevProfile = process.env.USERPROFILE;
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  try {
+    mkdirSync(join(home, '.claude'), { recursive: true });
+    const big = Array.from({ length: 400 }, (_, i) => `* rule number ${i}`).join('\n');
+    writeFileSync(join(project, 'CLAUDE.md'), big);
+
+    const bundle = buildBundle(project, { ...config, includeManaged: false, maxChars: 2000 });
+    assert.ok(bundle.chars <= 2000, `budget blown: ${bundle.chars}`);
+    assert.equal(bundle.included.length, 1);
+    assert.equal(bundle.included[0].truncated, true);
+    assert.match(bundle.text, /truncated by claude-md-guard/);
+    assert.match(bundle.text, /rule number 0/, 'the start of the file must survive');
   } finally {
     process.env.HOME = prevHome;
     process.env.USERPROFILE = prevProfile;

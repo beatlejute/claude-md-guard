@@ -61,7 +61,16 @@ protection is twofold — the `stop_hook_active` input field, and clearing the
 turn record before replying.
 
 Layer 3 ignores reads: `git status`, `ls`, `rg`, `cat` and the like do not count
-as changes, including under an `rtk` or `sudo` wrapper.
+as changes, including under an `rtk` or `sudo` wrapper. PowerShell is covered
+too — `Get-Content`, `Select-String`, `dir`, `Set-Location`, a captured
+`$c = Get-Content …`, and `Remove-Item Env:…` all read rather than change.
+`ForEach-Object` and `Invoke-*` are deliberately left out: their script blocks
+can do anything, and a false nudge is cheaper than a missed change.
+
+If a CLAUDE.md is large enough to be truncated, the better fix is on your side:
+Claude Code's own guidance is to keep each file under 200 lines, and
+[path-scoped rules](https://code.claude.com/docs/en/memory) in `.claude/rules/`
+load only when Claude touches matching files.
 
 ## Install
 
@@ -105,7 +114,7 @@ variables (the key in SCREAMING_SNAKE_CASE).
 | Key | Default | Meaning |
 | :-- | :------ | :------ |
 | `injectOn` | `startup, resume, clear, compact, fork` | Which SessionStart sources trigger injection. Narrow it to `compact, clear` if you would rather not duplicate the built-in load |
-| `maxChars` | `9000` | Character budget for the injection. Above 10000 Claude Code writes the text to a file and passes only the path |
+| `maxChars` | `9000` | Character budget for the injection. Above 10000 Claude Code writes the text to a file and passes the model a preview instead, so the budget stays under it: the most specific file is truncated with a notice if it alone exceeds the budget, and less specific files are dropped whole rather than delivered as fragments |
 | `nudgeCooldownSec` | `45` | Minimum interval between layer-3 nudges |
 | `nudgeOnNewFile` | `false` | Nudge on every new file regardless of the interval |
 | `stopMode` | `feedback` | `feedback` — soft form (`additionalContext`, shown as "Stop hook feedback"); `block` — hard form (`decision: block`, flagged as a hook error); `off` — disable layer 4 |

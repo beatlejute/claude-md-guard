@@ -81,6 +81,26 @@ test('SessionStart stays quiet when there are no rules', () => {
   assert.equal(out, null);
 });
 
+test('SessionStart keeps the injection under the Claude Code file-out limit', () => {
+  const env = isolated();
+  const cwd = sandbox('cmg-big-');
+  writeFileSync(
+    join(cwd, 'CLAUDE.md'),
+    Array.from({ length: 900 }, (_, i) => `* правило номер ${i}`).join('\n'),
+  );
+
+  const out = runHook('session-start.mjs', {
+    session_id: 'sess-big',
+    cwd,
+    source: 'startup',
+  }, env);
+
+  const context = out.hookSpecificOutput.additionalContext;
+  assert.ok(context.length < 10000, `would be filed out by Claude Code: ${context.length}`);
+  assert.match(context, /правило номер 0/, 'the rules themselves must be inline');
+  assert.match(context, /cut short at the context budget/, 'the cut must be declared');
+});
+
 test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {
   const out = runHook('user-prompt-submit.mjs', {
     session_id: 'sess-4',
