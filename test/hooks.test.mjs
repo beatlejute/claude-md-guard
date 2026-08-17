@@ -99,6 +99,9 @@ test('SessionStart keeps the injection under the Claude Code file-out limit', ()
   assert.ok(context.length < 10000, `would be filed out by Claude Code: ${context.length}`);
   assert.match(context, /правило номер 0/, 'the rules themselves must be inline');
   assert.match(context, /cut short at the context budget/, 'the cut must be declared');
+  // A reply this size is where a truncated stdout shows up: pipes are
+  // asynchronous on macOS, so an unflushed write is lost at exit.
+  assert.ok(context.length > 5000, 'the reply must be large enough to catch a partial write');
 });
 
 test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {

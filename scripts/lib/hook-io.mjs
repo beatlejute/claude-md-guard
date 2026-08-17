@@ -6,6 +6,8 @@
  * so run() swallows every exception and exits 0 with empty stdout.
  */
 
+import { writeSync } from 'node:fs';
+
 const STDIN_TIMEOUT_MS = 5000;
 
 /** Reads the event JSON from stdin. Returns {} on any failure or timeout. */
@@ -43,10 +45,26 @@ function readStdin() {
   });
 }
 
-/** Writes the hook's JSON reply. An empty payload produces no output at all. */
+/**
+ * Writes the hook's JSON reply. An empty payload produces no output at all.
+ *
+ * Written with writeSync rather than process.stdout.write: stdout is a pipe
+ * here, and pipes are asynchronous on macOS, so the exit below could discard
+ * a reply that had not been flushed yet. Short replies survived, a 9 KB rule
+ * injection did not.
+ */
 export function emit(payload) {
   if (!payload) return;
-  process.stdout.write(JSON.stringify(payload));
+  const data = Buffer.from(JSON.stringify(payload), 'utf8');
+  let written = 0;
+  while (written < data.length) {
+    try {
+      written += writeSync(1, data, written, data.length - written);
+    } catch (err) {
+      if (err.code === 'EAGAIN') continue; // non-blocking pipe, not yet drained
+      throw err;
+    }
+  }
 }
 
 /**

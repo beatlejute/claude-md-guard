@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] — 2026-08-15
+
+### Fixed
+
+- A large injection could reach Claude Code truncated, or not at all. The
+  hook wrote its reply with `process.stdout.write` and then called
+  `process.exit(0)`; stdout is a pipe there, pipes are asynchronous on macOS,
+  and an unflushed write is discarded at exit. Short replies survived, a 9 KB
+  rule injection came out cut mid-string. Replies are now written with
+  `writeSync` in a loop, which is synchronous everywhere and handles partial
+  writes.
+
 ## [0.9.0] — 2026-08-15
 
 From a third session: 56 shell commands, 23 of them nudged without cause.
@@ -179,6 +191,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.9.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.9.1
 [0.9.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.9.0
 [0.8.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.8.0
 [0.7.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.7.1
