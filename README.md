@@ -86,13 +86,39 @@ file; a redirect to a real path does count as a change.
 
 What deliberately stays on the cautious side: `python`, `node` and other
 interpreters count as changes whatever their arguments say, because a script
-can write anything. In two measured sessions that is the only remaining source
-of false nudges.
+can write anything. Measured against 5037 commands from real sessions, the
+filter agrees with a hand-written baseline on 89.7% of them, nudges without
+cause on 9.5% — nearly all of those interpreter calls — and misses a change
+on 0.8%.
 
 If a CLAUDE.md is large enough to be truncated, the better fix is on your side:
 Claude Code's own guidance is to keep each file under 200 lines, and
 [path-scoped rules](https://code.claude.com/docs/en/memory) in `.claude/rules/`
 load only when Claude touches matching files.
+
+## What it costs in practice
+
+Measured over 55 sessions and 2247 turns of ordinary work, with all four
+layers on:
+
+| | tokens | share |
+| :-- | --: | --: |
+| Everything written into context (input + cache creation) | 746,940,663 | — |
+| The plugin's injections | 681,554 | **0.09%** |
+| All model output | 15,008,474 | — |
+| Compliance checklists in answers | 85,095 | **0.57%** |
+| Extra model rounds after Stop (133 of them) | 65,203 | 0.43% of output |
+| **Plugin total, against input plus output** | | **0.10%** |
+
+Roughly one tenth of one percent. The injections themselves are not the
+expensive part — the extra round a `Stop` costs is, and that round is also
+where the plugin does most of its work: 512 of those turns ended with an
+explicit rule-by-rule checklist.
+
+Token counts are estimated from character counts rather than a real
+tokenizer, so read them as tenths of a percent, not exact figures. The
+injected rules also sit in context and are re-read on every request, which
+adds cache reads at roughly a tenth of the price of fresh input.
 
 ## Install
 
