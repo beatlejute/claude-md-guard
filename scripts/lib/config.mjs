@@ -12,8 +12,15 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 export const DEFAULTS = {
-  /** SessionStart sources that trigger a full injection of the rules. */
-  injectOn: ['startup', 'resume', 'clear', 'compact', 'fork'],
+  /**
+   * SessionStart sources that trigger a full injection of the rules.
+   *
+   * Only 'compact' by default. On startup, resume, clear and fork Claude Code
+   * loads CLAUDE.md itself, and injecting it again just spends context window
+   * on a second copy. Compaction is the case where the original load may not
+   * survive, so there is nothing left to re-read from.
+   */
+  injectOn: ['compact'],
   /** Character budget for the injection. Above 10000 Claude Code files it out. */
   maxChars: 9000,
   /** Do not repeat the PostToolUse nudge more often than this. */
