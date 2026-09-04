@@ -9,9 +9,9 @@ touched files finish without checking itself against them.
 
 The problem it solves: CLAUDE.md content reaches the model as an ordinary user
 message wrapped in the caveat *"this context may or may not be relevant to your
-task"*, and a compaction can drop it entirely — after which there is nothing
-left to re-read from. Hooks put the text back as a plain `system-reminder`,
-with no caveat, exactly where the original load did not survive.
+task"*. After a compaction it may not survive at all. Hooks, by contrast, put
+the text into context as a plain `system-reminder` — no caveat, and freshly on
+every session.
 
 ## How it works
 
@@ -19,7 +19,7 @@ Four layers, cheapest first:
 
 | Layer | Event | What it does | Cost |
 | :---- | :---- | :----------- | :--- |
-| 1. Re-injection | `SessionStart` | **After a compaction**, puts the full text of the CLAUDE.md files in force back into context | size of the rules, only after a compaction |
+| 1. Re-injection | `SessionStart` | Puts the full text of the CLAUDE.md files in force into context — on startup, on `--resume`, after `/clear`, after a compaction, and in a fork | size of the rules, once per session |
 | 2. Reminder | `UserPromptSubmit` | Asks the model to check itself against the rules before acting, and to show the verdict rule by rule whenever it concludes, analyses or recommends | ~90 tokens per prompt |
 | 3. Nudge | `PostToolUse` | After `Edit`/`Write`/`MultiEdit`/`NotebookEdit`/`Bash` — "you just changed `<file>`, check it against CLAUDE.md". The wording rotates so the model does not tune it out | ~35 tokens, at most once per 45 s |
 | 4. Self-check | `Stop` | If the turn changed anything, lists what changed and asks for a rule-by-rule compliance list before finishing | ~80 tokens plus one extra model round |
@@ -57,14 +57,14 @@ skip the list where it matters. Set `complianceReport` to `changes` to narrow
 it further, to turns that actually changed something, or to `off` for the plain
 "check yourself" wording.
 
-Layer 1 runs only after a compaction by default. On startup, resume, `/clear`
-and fork Claude Code loads CLAUDE.md itself, and injecting a second copy would
-spend context window for nothing. Add those sources to `injectOn` if you want
-the uncaveated `system-reminder` framing from the first turn as well, at the
-cost of carrying the rules twice.
+Layer 1 runs on every session start. Claude Code does load CLAUDE.md itself on
+startup, resume, `/clear` and fork, but it arrives as a user message under the
+"may or may not be relevant" caveat, and that is the copy a drifting model
+discounts first. Narrow `injectOn` to `["compact"]` to pay only where the
+original load may not have survived at all.
 
-When it does run, layer 1 mirrors how Claude Code itself loads memory: it walks
-the tree from the root down to the working directory, collects `CLAUDE.md`, `CLAUDE.local.md`,
+Layer 1 mirrors how Claude Code itself loads memory: it walks the tree from the
+root down to the working directory, collects `CLAUDE.md`, `CLAUDE.local.md`,
 `.claude/CLAUDE.md`, `.claude/rules/*.md` (path-scoped rules excluded) and the
 machine-wide managed-policy file, expands `@` imports (up to 4 hops, skipping
 code) and strips block HTML comments.
@@ -126,10 +126,6 @@ tokenizer, so read them as tenths of a percent, not exact figures. The
 injected rules also sit in context and are re-read on every request, which
 adds cache reads at roughly a tenth of the price of fresh input.
 
-Those numbers were measured while layer 1 injected on every session start.
-With the current default — compaction only — the injection share is lower
-again, and a session that never compacts pays nothing for it at all.
-
 ## Install
 
 The repository is both a plugin and a marketplace, so one line registers it:
@@ -171,7 +167,7 @@ variables (the key in SCREAMING_SNAKE_CASE).
 
 | Key | Default | Meaning |
 | :-- | :------ | :------ |
-| `injectOn` | `compact` | Which SessionStart sources trigger injection. Only compaction by default, since that is the case where the built-in load may be gone. Add `startup`, `resume`, `clear` or `fork` to also re-inject where Claude Code already loaded the file |
+| `injectOn` | `startup, resume, clear, compact, fork` | Which SessionStart sources trigger injection. Narrow it to `compact` to re-inject only where the built-in load may be gone |
 | `maxChars` | `9000` | Character budget for the injection. Above 10000 Claude Code writes the text to a file and passes the model a preview instead, so the budget stays under it: the most specific file is truncated with a notice if it alone exceeds the budget, and less specific files are dropped whole rather than delivered as fragments |
 | `nudgeCooldownSec` | `45` | Minimum interval between layer-3 nudges |
 | `nudgeOnNewFile` | `false` | Nudge on every new file regardless of the interval |

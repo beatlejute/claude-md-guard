@@ -15,12 +15,14 @@ export const DEFAULTS = {
   /**
    * SessionStart sources that trigger a full injection of the rules.
    *
-   * Only 'compact' by default. On startup, resume, clear and fork Claude Code
-   * loads CLAUDE.md itself, and injecting it again just spends context window
-   * on a second copy. Compaction is the case where the original load may not
-   * survive, so there is nothing left to re-read from.
+   * All of them by default. Claude Code does load CLAUDE.md itself on startup,
+   * resume, clear and fork, but it arrives as a user message carrying the
+   * "may or may not be relevant" caveat, and a rule delivered that way is the
+   * one that gets dropped first. The injection restates it as a plain system
+   * reminder. Narrow this to ['compact'] to pay only where the original load
+   * may not have survived.
    */
-  injectOn: ['compact'],
+  injectOn: ['startup', 'resume', 'clear', 'compact', 'fork'],
   /** Character budget for the injection. Above 10000 Claude Code files it out. */
   maxChars: 9000,
   /** Do not repeat the PostToolUse nudge more often than this. */

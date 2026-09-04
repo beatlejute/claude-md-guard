@@ -62,22 +62,22 @@ test('SessionStart injects the rules', () => {
   assert.match(context, /compact/);
 });
 
-test('SessionStart does not duplicate the load Claude Code already did', () => {
+test('SessionStart injects on every source by default', () => {
   const cwd = projectWithRules();
-  for (const source of ['startup', 'resume', 'clear', 'fork']) {
+  for (const source of ['startup', 'resume', 'clear', 'compact', 'fork']) {
     const out = runHook('session-start.mjs', { session_id: 'sess-2', cwd, source }, isolated());
-    assert.equal(out, null, source + ' already carries CLAUDE.md from Claude Code itself');
+    assert.match(out.hookSpecificOutput.additionalContext, /project rule/, source);
   }
 });
 
-test('SessionStart injects on any source the config asks for', () => {
-  const env = { ...isolated(), CLAUDE_MD_GUARD_INJECT_ON: 'startup,compact' };
+test('SessionStart honours a narrowed injectOn', () => {
+  const env = { ...isolated(), CLAUDE_MD_GUARD_INJECT_ON: 'compact' };
   const out = runHook('session-start.mjs', {
     session_id: 'sess-2b',
     cwd: projectWithRules(),
     source: 'startup',
   }, env);
-  assert.match(out.hookSpecificOutput.additionalContext, /project rule/);
+  assert.equal(out, null);
 });
 
 test('SessionStart stays quiet when there are no rules', () => {

@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] — 2026-09-04
+
+### Changed
+
+- Reverts 0.10.0: layer 1 injects on every session start again, not only
+  after a compaction. Skipping the duplicate saved context, but the copy
+  Claude Code loads itself is the caveated one, and a rule delivered that way
+  is the first to be discounted — drift showed up in practice within two
+  weeks. `injectOn: ["compact"]` restores the narrow behaviour.
+
 ## [0.10.0] — 2026-08-21
 
 ### Changed
@@ -203,6 +213,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.11.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.11.0
 [0.10.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.10.0
 [0.9.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.9.1
 [0.9.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.9.0
