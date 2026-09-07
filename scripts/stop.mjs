@@ -10,7 +10,7 @@
  *    reply would force a second round onto every single answer.
  */
 
-import { additionalContext, readInput, run } from './lib/hook-io.mjs';
+import { additionalContext, isDelegate, readInput, run } from './lib/hook-io.mjs';
 import { loadConfig, message } from './lib/config.mjs';
 import { clearTurn, readTurn } from './lib/state.mjs';
 
@@ -19,6 +19,7 @@ const MAX_LISTED = 8;
 run(async () => {
   const input = await readInput();
   if (input.stop_hook_active === true) return null;
+  if (isDelegate()) return null;
 
   const config = loadConfig(input.cwd);
   const events = readTurn(input.session_id);

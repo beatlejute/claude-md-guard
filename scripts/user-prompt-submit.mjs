@@ -14,7 +14,7 @@
  * instant.
  */
 
-import { additionalContext, readInput, run } from './lib/hook-io.mjs';
+import { additionalContext, isDelegate, readInput, run } from './lib/hook-io.mjs';
 import { loadConfig, message } from './lib/config.mjs';
 
 const BASE =
@@ -28,6 +28,7 @@ run(async () => {
   const config = loadConfig(input.cwd);
   if (!config.promptReminder) return null;
 
-  const text = config.complianceReport === 'analysis' ? BASE + REPORT : BASE;
+  const wantsReport = config.complianceReport === 'analysis' && !isDelegate();
+  const text = wantsReport ? BASE + REPORT : BASE;
   return additionalContext('UserPromptSubmit', message(config, 'promptReminder', text));
 });

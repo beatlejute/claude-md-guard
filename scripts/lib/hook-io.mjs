@@ -76,6 +76,16 @@ export function additionalContext(hookEventName, text) {
   return { hookSpecificOutput: { hookEventName, additionalContext: text } };
 }
 
+/**
+ * Is this a delegated headless run (claude -p) rather than the session a person
+ * is talking to? A delegate answers with data. Asked for a compliance list it
+ * writes one as its final message, and because the caller receives only that
+ * message, the findings it was run for are lost.
+ */
+export function isDelegate() {
+  return process.env.CLAUDE_CODE_ENTRYPOINT === 'sdk-cli' || !!process.env.ANTHROPIC_BASE_URL;
+}
+
 /** Runs the hook body, swallowing errors: the session matters more than the hook. */
 export async function run(main) {
   try {
