@@ -21,7 +21,7 @@ const BASE =
   'Check your plan and your actions for this turn against CLAUDE.md before acting; where they differ, CLAUDE.md wins.';
 
 const REPORT =
-  ' When your answer concludes, analyses or recommends, end it with "**CLAUDE.md**" on its own line, then a blank line, then unindented checklist items: "- [x] <rule>" where you followed it, "- [ ] <rule> — <what and where>" where you did not; without the blank line they nest under the heading instead of rendering as checkboxes. Cover only the rules that bear on this turn and fix the unchecked ones first. Status updates and short factual replies carry no checklist.';
+  ' When your answer concludes, analyses or recommends, end it with "**CLAUDE.md**" on its own line, a blank line, then the rules bearing on this turn — quoted in the wording CLAUDE.md uses and in the order they appear there — each as "- [x] <rule>" where you followed it or "- [ ] <rule> — <what and where>" where you did not. Re-read the rules rather than recalling them: a rule you cannot quote is a rule you did not check. Status updates and short factual replies carry no checklist.';
 
 run(async () => {
   const input = await readInput();

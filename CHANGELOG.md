@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] — 2026-09-07
+
+### Changed
+
+- Layers 2 and 4 now ask for the rules to be quoted from CLAUDE.md rather than
+  recalled, and listed in the order they appear in the file. Measured on a
+  three-day session: the reminder was delivered on 1498 of 1516 turns (98.8%)
+  and produced a checklist on 47 (3.1%) — the text arrived, the check did not
+  happen. Asking for quotes in file order splits the work in two: write the
+  rules out first, judge them second. A rule skipped mid-file leaves a gap;
+  a list assembled from memory quietly keeps the convenient ones.
+
+### Added
+
+- The checklist is skipped in headless delegate runs (`claude -p`), detected
+  through `CLAUDE_CODE_ENTRYPOINT=sdk-cli` or a set `ANTHROPIC_BASE_URL`. A
+  delegate answers with data, and the caller sees only its final message — a
+  compliance list there replaces the findings the run was for.
+
 ## [0.11.0] — 2026-09-04
 
 ### Changed
@@ -213,6 +232,7 @@ First release. Four hook layers, no dependencies.
   variables, including full overrides for the text sent to the model.
 - 20 tests covering the library functions and the hook scripts end to end.
 
+[0.12.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.12.0
 [0.11.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.11.0
 [0.10.0]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.10.0
 [0.9.1]: https://github.com/beatlejute/claude-md-guard/releases/tag/v0.9.1

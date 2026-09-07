@@ -43,6 +43,12 @@ Naming each rule and its verdict is what makes a skipped rule visible. Only
 rules that actually bear on the turn belong in the list — a rule that does not
 apply is left out, not listed as "not applicable".
 
+Both layers ask for the rules to be re-read rather than recalled, quoted in the
+wording CLAUDE.md uses, and listed in the order they appear in the file. Order
+matters: a rule skipped in the middle of a file leaves a visible gap, while a
+list assembled from memory quietly keeps the convenient ones. A rule you cannot
+quote is a rule you did not check.
+
 The checklist is printed once. Layer 4 reads `last_assistant_message`, and if
 the answer already carries one it stays silent instead of asking for a second,
 which also saves the extra model round. An ordinary plan written as checkboxes

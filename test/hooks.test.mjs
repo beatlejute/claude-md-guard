@@ -123,6 +123,8 @@ test('UserPromptSubmit asks for a rule-by-rule verdict in the output', () => {
   assert.equal(out.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
   assert.match(context, /CLAUDE\.md/);
   assert.match(context, /concludes, analyses or recommends/);
+  assert.match(context, /Re-read the rules rather than recalling them/, 'the quote-first rule must be there');
+  assert.match(context, /in the order they appear/, 'file order is what exposes a skipped rule');
   assert.match(context, /\*\*CLAUDE\.md\*\*/, 'the heading must not be a list item');
   assert.match(context, /blank line/, 'the blank line is what keeps the items un-nested');
   assert.match(context, /"- \[x\] <rule>"/, 'the checklist format must be spelled out');
@@ -330,7 +332,7 @@ test('Stop still asks when the answer only mentions a verdict word in prose', ()
     last_assistant_message: 'I followed the plan and rewrote the retry logic.',
   }, env);
   assert.ok(out, 'one stray "followed" in prose is not a compliance list');
-  assert.match(out.hookSpecificOutput.additionalContext, /rule by rule/);
+  assert.match(out.hookSpecificOutput.additionalContext, /List every rule that mentions/);
 });
 
 test('Stop asks again when complianceReport is off, list or not', () => {
@@ -379,7 +381,7 @@ test('Stop still asks for the report when it is limited to changes', () => {
   }, env);
 
   const stop = runHook('stop.mjs', { session_id: 'sess-7c', cwd, stop_hook_active: false }, env);
-  assert.match(stop.hookSpecificOutput.additionalContext, /rule by rule/);
+  assert.match(stop.hookSpecificOutput.additionalContext, /List every rule that mentions/);
 });
 
 test('Stop stays quiet on a conversational turn', () => {

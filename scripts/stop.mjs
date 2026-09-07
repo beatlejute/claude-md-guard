@@ -53,11 +53,12 @@ function render(events, config) {
     );
   } else {
     parts.push(
-      'Re-read CLAUDE.md and go through it rule by rule against this turn.',
-      'End your answer with "**CLAUDE.md**" on its own line, then a blank line, then unindented checklist items:',
+      'Re-read CLAUDE.md itself — do not work from what you remember of it.',
+      'List every rule that mentions the tools, commands or files this turn touched, quoted in the wording CLAUDE.md uses and in the order they appear there; a rule you cannot quote is a rule you did not check.',
+      'End your answer with "**CLAUDE.md**" on its own line, then a blank line, then those rules as unindented items:',
       '"- [x] <rule>" where the turn followed it, "- [ ] <rule> — <what went wrong and where>" where it did not.',
       'The blank line matters: without it the items nest under the heading instead of rendering as checkboxes.',
-      'Cover only the rules that bear on this turn, leave the rest out rather than listing them as not applicable, and fix the unchecked ones before finishing.',
+      'Leave out rules that bear on nothing this turn did, and fix the unchecked ones before finishing.',
     );
   }
   return parts.join(' ');
